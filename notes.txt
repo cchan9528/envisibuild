@@ -13,6 +13,13 @@ Define macros found manually
 
 2. Cumulative mask
 
+same build command even though moved macros to header file
+
+used interpolation to resize!
+
+bitwise or mask b/c it's more intuitive
+    i thikn the overflow of an unsigned char makes it so adding two of them is the same
+
 3. Contours
 
 4. Centroids
