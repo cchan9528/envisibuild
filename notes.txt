@@ -1,0 +1,22 @@
+opencv and opencv2 is in /usr/local/include/
+
+http://colorizer.org/
+interesting graphic about hsv
+
+1. Determine appropriate colors for legos
+http://opencv-srf.blogspot.com/2010/09/object-detection-using-color-seperation.html
+
+build command
+g++ -g -Wall -I/usr/local/include/ -L/usr/local/lib -lopencv_calib3d -lopencv_contrib -lopencv_core -lopencv_features2d -lopencv_flann -lopencv_gpu -lopencv_highgui -lopencv_imgproc -lopencv_legacy -lopencv_ml -lopencv_nonfree -lopencv_objdetect -lopencv_ocl -lopencv_photo -lopencv_stitching -lopencv_superres -lopencv_ts -lopencv_video -lopencv_videostab -o HSVFinder HSVFinder.cpp
+
+Define macros found manually
+
+2. Cumulative mask
+
+3. Contours
+
+4. Centroids
+
+5. Labels
+
+6. Sequencing
