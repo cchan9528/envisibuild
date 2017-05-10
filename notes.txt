@@ -11,6 +11,8 @@ g++ -g -Wall -I/usr/local/include/ -L/usr/local/lib -lopencv_calib3d -lopencv_co
 
 Define macros found manually
 
+Highly dependent on exposure
+
 2. Cumulative mask
 
 same build command even though moved macros to header file
@@ -18,9 +20,29 @@ same build command even though moved macros to header file
 used interpolation to resize!
 
 bitwise or mask b/c it's more intuitive
-    i thikn the overflow of an unsigned char makes it so adding two of them is the same
+    i think the overflow of an unsigned char makes it so adding two of them is the same
+
+Still RUDIMENTARY
+    Thresholding is very basic
+    As we can see, we pick up a lot of noise/things we don't want as "LEGOS" w/ thresholding alone
+    ML could help us/is how you get better results
+
+LPF to filter out noise (APPLY AFTER THRESHOLDING)
 
 3. Contours
+
+had to convert the mask to bgr format to display Color
+
+also be careful of the order
+
+- find Contours from a clone of the image b/c findContours() modifies it
+- draw them on the Original
+- display the original
+
+http://docs.opencv.org/trunk/dd/d49/tutorial_py_contour_features.html
+
+Also be aware that you should draw the bounding box before you add it to total
+Do this for each mask so you don't combine two from different colors accidentally
 
 4. Centroids
 
