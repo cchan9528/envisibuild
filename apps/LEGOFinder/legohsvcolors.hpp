@@ -1,6 +1,7 @@
 #ifndef LEGOHSVCOLORS_HPP
 #define LEGOHSVCOLORS_HPP
 
+#define NUM_COLORS 5
 #define RED_H_LO 0
 #define RED_S_LO 138
 #define RED_V_LO 0

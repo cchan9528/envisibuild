@@ -46,6 +46,8 @@ Do this for each mask so you don't combine two from different colors accidentall
 
 4. Centroids
 
+straightforward - just width/2, height/2 offset
+
 5. Labels
 
 6. Sequencing

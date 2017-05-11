@@ -4,7 +4,7 @@
 #include <opencv2/imgproc.hpp>
 #include "legohsvcolors.hpp"
 
-#include AREA_THRESHOLD 5000        // Inherent Scale Variance
+#define LEGO_AREA_THRESHOLD 5000        // Inherent Scale Variance
 
 using namespace std;
 
@@ -40,6 +40,7 @@ int main(int argc, char** argv)
     cv::Scalar whiteLB(WHITE_H_LO, WHITE_S_LO, WHITE_V_LO);
     cv::Scalar whiteUB(WHITE_H_HI, WHITE_S_HI, WHITE_V_HI);
 
+
     // Create Threshold Masks for LEGO Colors and One Cumulative Mask
     cv::Mat greenMask;
     cv::inRange(frameInHSV, greenLB, greenUB, greenMask);
@@ -67,15 +68,22 @@ int main(int argc, char** argv)
         cv::findContours(image[i].clone(), contours, // hierarchy,
                         CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE);
 
-        // Draw Bounding Boxes Around LEGOs (Determined by Area)
         cv::Mat imageInBGR;
         cv::cvtColor(image[i], imageInBGR, CV_GRAY2BGR);
         for(int i = 0; i < contours.size(); i++)
         {
-            if(cv::contourArea(contours[i]) < AREA_THRESHOLD)
+            // Draw Bounding Boxes Around LEGOs (Determined by Area)
+            if(cv::contourArea(contours[i]) < LEGO_AREA_THRESHOLD)
                 continue;
             cv::Rect r = cv::boundingRect(contours[i]);
-            cv::rectangle(imageInBGR, r, cv::Scalar(0,255,0), 8);
+            cv::Scalar green(0,255,0);
+            cv::rectangle(imageInBGR, r, green, 8);
+
+            // Find Centers
+            // cv::Point center(r.x+r.width/2, r.y+r.height/2);
+            // double radius = 10;
+            // double lineThickness = 15;
+            // cv::circle(imageInBGR, center, radius, green, lineThickness);
         }
 
         // DEBUG
@@ -95,7 +103,7 @@ int main(int argc, char** argv)
     // For Observation
     while(true)
         if(cv::waitKey(30) == 27)
-            cout<<"\n\n\nUser held esc key to terminate program"<<endl; break;
+        {    cout<<"\n\n\nUser held esc key to terminate program"<<endl; break;}
 
     // Exit
     cout<< "\n\n\nHSVFinder Terminated on Success." << endl;
