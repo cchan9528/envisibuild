@@ -13,36 +13,37 @@
 #define RED_H_LO 0
 #define RED_S_LO 138
 #define RED_V_LO 0
-#define RED_H_HI 16
+#define RED_H_HI 12
 #define RED_S_HI 255
 #define RED_V_HI 255
-#define BLUE_H_LO 66
+#define BLUE_H_LO 70
 #define BLUE_S_LO 0
-#define BLUE_V_LO 115
-#define BLUE_H_HI 179
+#define BLUE_V_LO 0
+#define BLUE_H_HI 180
 #define BLUE_S_HI 255
 #define BLUE_V_HI 255
-#define GREEN_H_LO 31
-#define GREEN_S_LO 95
-#define GREEN_V_LO 95
-#define GREEN_H_HI 66
+#define GREEN_H_LO 30
+#define GREEN_S_LO 100
+#define GREEN_V_LO 70
+#define GREEN_H_HI 70
 #define GREEN_S_HI 255
 #define GREEN_V_HI 255
 #define WHITE_H_LO 0
 #define WHITE_S_LO 0
-#define WHITE_V_LO 255
-#define WHITE_H_HI 179
-#define WHITE_S_HI 112
+#define WHITE_V_LO 210
+#define WHITE_H_HI 180
+#define WHITE_S_HI 120
 #define WHITE_V_HI 255
-#define YELLOW_H_LO 16
-#define YELLOW_S_LO 150
-#define YELLOW_V_LO 150
-#define YELLOW_H_HI 28
+#define YELLOW_H_LO 15
+#define YELLOW_S_LO 200
+#define YELLOW_V_LO 180
+#define YELLOW_H_HI 45
 #define YELLOW_S_HI 255
 #define YELLOW_V_HI 255
-#define SQ_SIDES_RATIO_UB 1.2
-#define SQ_SIDES_RATIO_LB 0.8
-#define LEGO_AREA_THRESHOLD 5000        // Inherent Scale Variance
+#define SQ_SIDES_RATIO_UB 1.15
+#define SQ_SIDES_RATIO_LB 0.85
+#define LEGO_AREA_THRESHOLD 20000        // Inherent Scale Variance
+#define LEGO_DENSITY_THRESHOLD 0.15
 
     /******************************************************
      *
@@ -76,7 +77,7 @@ namespace lw {
     } Instruction;
 
     typedef struct Project{
-        project_t name;
+        int numInstr;
         Instruction instr[];
     } Project;
 
@@ -87,6 +88,12 @@ namespace lw {
      ******************************************************/
 
     // Striped Cube
+    // const Project striped_cube = {
+    //     .numInstr = ;
+    //     .instr[0] = {
+    //
+    //     }
+    // }
 
     // Staircase
 

@@ -1,6 +1,7 @@
 #include "legoworld.h"
 #include <opencv2/core.hpp>
 #include <opencv2/highgui.hpp>          // Media I/O
+#include <opencv2/imgproc.hpp>
 #include <iostream>
 
 using namespace std;
@@ -29,6 +30,14 @@ int main(int argc, char** argv)
         {.c = yellow, .sCount = 0, .rCount = 0},
         {.c = white,  .sCount = 0, .rCount = 0}
     };
+
+    // DEBUG
+    cv::Mat resized;
+    cv::resize(frame, resized, cv::Size(), .15, .15);
+    cv::imshow("original", resized);
+    // END DEBUG
+
     lw::countPieces(frame, tabs, 5);
     lw::materialsReport(tabs, 5);
+
 }

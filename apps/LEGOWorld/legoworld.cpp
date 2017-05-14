@@ -36,25 +36,70 @@ namespace lw{
 
     void countPieces(cv::Mat frame, Colortab * tab)
     {
+        // CANNY
+        cv::Mat frameInGray,t;
+        cv::cvtColor(frame, frameInGray, CV_BGR2GRAY);
+
+        cv::equalizeHist(frameInGray,frameInGray);
+        // cv::normalize(frameInGray, frameInGray);
+        cv::resize(frameInGray, t, cv::Size(), .15, .15);
+        cv::imshow("equalized", t);
+
+        cv::blur(frameInGray, frameInGray, cv::Size(5,5));
+        // cv::Mat cannyEdges;
+        // double hysLo = 15, hysHi = hysLo * 3;
+        // cv::Canny( frameInGray, cannyEdges, hysLo, hysHi );
+        // cv::Canny( frame, cannyEdges, hysLo, hysHi );
+        // int dxOrder = 1, dyOrder = 1;
+        // cv::Sobel(frameInGray, frameInGray, -1, dxOrder, dyOrder);
+        cv::Mat r1, r2, edgeMask=frameInGray.clone(), tmp;
+        // cv::Sobel(frameInGray, r1, -1, 3, 0, 15, 10);
+        // cv::Sobel(frameInGray, r2, -1, 0, 3, 15, 10);
+        // edgeMask = r1 + r2;
+
+        // cv::GaussianBlur(edgeMask, edgeMask, cv::Size(11,11), 200, 200);
+        // cv::blur(edgeMask, edgeMask, cv::Size(201,201));
+        // cv::erode(r,r, cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(3,3)));
+        // cv::dilate(edgeMask,tmp,cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(5,5)));
+        // cv::medianBlur(edgeMask, edgeMask, 31);
+        // cv::blur(edgeMask, edgeMask, cv::Size(201,201));
+        // edgeMask = tmp - edgeMask;
+        // cv::Laplacian(frameInGray, t, CV_8U , 5);
+        // edgeMask = edgeMask - t;
+
+        cv::Mat dst = frame.clone();
+        dst = cv::Scalar::all(0);
+        frame.copyTo(dst,edgeMask);
+        cv::Mat w;
+        cv::resize(edgeMask, w, cv::Size(), .15, .15);
+        // cv::resize(dst, w, cv::Size(), .15, .15);
+        cv::imshow("Canny Edges", w);
+
         cv::Mat frameInHSV;
         cv::cvtColor(frame, frameInHSV, cv::COLOR_BGR2HSV);
+        // END CANNY
 
         color_t c = (*tab).c;
+
+        // DEBUG
+        string color;
+        cv::Mat maskInBGR;
+        // END DEBUG
 
         cv::Mat mask;
         cv::Scalar lb, ub;
         switch(c)
         {
             case green:
-                lb = greenLB; ub = greenUB; break;
+                lb = greenLB; ub = greenUB; color="Green"; break;
             case blue:
-                lb = blueLB; ub = blueUB; break;
+                lb = blueLB; ub = blueUB; color="Blue"; break;
             case red:
-                lb = redLB; ub = redUB; break;
+                lb = redLB; ub = redUB; color="Red"; break;
             case yellow:
-                lb = yellowLB; ub = yellowUB; break;
+                lb = yellowLB; ub = yellowUB; color="Yellow"; break;
             case white:
-                lb = whiteLB; ub = whiteUB; break;
+                lb = whiteLB; ub = whiteUB; color="White"; break;
             default:
                 return;
         }
@@ -64,18 +109,48 @@ namespace lw{
         vector< vector<cv::Point> > contours;
         cv::findContours(mask.clone(), contours,
                         CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE);
+
+        //DEBUG
+        if(contours.size()!=0)
+            cv::cvtColor(mask, maskInBGR, CV_GRAY2BGR);
+        // END DEBUG
+
         for(int i = 0; i < contours.size(); i++)
         {
-            if(cv::contourArea(contours[i]) < LEGO_AREA_THRESHOLD)
-                continue;
+            // Calculate (Avg) Density of White Pixels
             cv::Rect r = cv::boundingRect(contours[i]);
+            cv::Mat patch; mask(r).copyTo(patch);
+            float numWhites = (float) cv::countNonZero(patch);
+            float area = r.width * r.height;
+            float density = numWhites/area;
+
+            // Ignore Noise
+            if(cv::contourArea(contours[i]) < LEGO_AREA_THRESHOLD ||
+                density < LEGO_DENSITY_THRESHOLD)
+                continue;
+
+            // Update Color Tab
             shape_t s = findShape(r);
             if(s == square)
                 (*tab).sCount++;
             else
                 (*tab).rCount++;
-        }
 
+            //DEBUG
+            cv::Scalar green(0,255,0);
+            cv::rectangle(maskInBGR, r, green, 8);
+        }
+        // DEBUG
+        if(contours.size()!=0)
+        {
+            cv::Mat resized;
+            cv::resize(maskInBGR, resized, cv::Size(), .15, .15);
+            cv::imshow(color + "(blurred)", resized);
+            while(true)
+                if(cv::waitKey(30) == 27)
+                {    cout<<"\n\n\nUser held esc key to terminate program"<<endl; break;}
+        }
+        // END DEBUG
     }
 
     void materialsReport(Colortab * tabs, int tabsSize)

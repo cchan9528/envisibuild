@@ -4,7 +4,8 @@
 #include <opencv2/imgproc.hpp>
 #include "legohsvcolors.hpp"
 
-#define LEGO_AREA_THRESHOLD 5000        // Inherent Scale Variance
+#define LEGO_AREA_THRESHOLD 20000        // Inherent Scale Variance
+#define LEGO_DENSITY_THRESHOLD 0.15
 
 using namespace std;
 
@@ -70,15 +71,21 @@ int main(int argc, char** argv)
 
         cv::Mat imageInBGR;
         cv::cvtColor(image[i], imageInBGR, CV_GRAY2BGR);
-        for(int i = 0; i < contours.size(); i++)
+        for(int j = 0; j < contours.size(); j++)
         {
             // Draw Bounding Boxes Around LEGOs (Determined by Area)
-            if(cv::contourArea(contours[i]) < LEGO_AREA_THRESHOLD)
+            cv::Rect r = cv::boundingRect(contours[j]);
+            cv::Mat patch; (image[i])(r).copyTo(patch);
+            float numWhites = (float) cv::countNonZero(patch);
+            float area = r.width * r.height;
+            float density = numWhites/area;
+            if(cv::contourArea(contours[j]) < LEGO_AREA_THRESHOLD ||
+                density < LEGO_DENSITY_THRESHOLD)
                 continue;
-            cv::Rect r = cv::boundingRect(contours[i]);
             cv::Scalar green(0,255,0);
             cv::rectangle(imageInBGR, r, green, 8);
 
+            cout<<r.x<<" "<<r.y<<" "<<density<<endl;
             // Find Centers
             // cv::Point center(r.x+r.width/2, r.y+r.height/2);
             // double radius = 10;
@@ -106,6 +113,6 @@ int main(int argc, char** argv)
         {    cout<<"\n\n\nUser held esc key to terminate program"<<endl; break;}
 
     // Exit
-    cout<< "\n\n\nHSVFinder Terminated on Success." << endl;
+    cout<< "\n\n\nLEGOFinder Terminated on Success." << endl;
     return 0;
 }
