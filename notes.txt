@@ -44,6 +44,8 @@ http://docs.opencv.org/trunk/dd/d49/tutorial_py_contour_features.html
 Also be aware that you should draw the bounding box before you add it to total
 Do this for each mask so you don't combine two from different colors accidentally
 
+use minimum bounding box for more consistent areas and densities
+
 4. Centroids
 
 straightforward - just width/2, height/2 offset

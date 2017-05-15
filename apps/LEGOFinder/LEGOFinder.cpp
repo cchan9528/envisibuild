@@ -5,7 +5,7 @@
 #include "legohsvcolors.hpp"
 
 #define LEGO_AREA_THRESHOLD 20000        // Inherent Scale Variance
-#define LEGO_DENSITY_THRESHOLD 0.15
+#define LEGO_DENSITY_THRESHOLD 0.40
 
 using namespace std;
 
@@ -29,7 +29,7 @@ int main(int argc, char** argv)
     cv::Mat frameInHSV;
     cv::cvtColor(frame, frameInHSV, cv::COLOR_BGR2HSV);
 
-    // Define HSV LEGO Color Bounds
+    // Define HSV LEGO Color Bounds and Bounding Box Color
     cv::Scalar greenLB(GREEN_H_LO, GREEN_S_LO, GREEN_V_LO);
     cv::Scalar greenUB(GREEN_H_HI, GREEN_S_HI, GREEN_V_HI);
     cv::Scalar blueLB(BLUE_H_LO, BLUE_S_LO, BLUE_V_LO);
@@ -40,7 +40,7 @@ int main(int argc, char** argv)
     cv::Scalar yellowUB(YELLOW_H_HI, YELLOW_S_HI, YELLOW_V_HI);
     cv::Scalar whiteLB(WHITE_H_LO, WHITE_S_LO, WHITE_V_LO);
     cv::Scalar whiteUB(WHITE_H_HI, WHITE_S_HI, WHITE_V_HI);
-
+    cv::Scalar bbcolor(0,255,0);
 
     // Create Threshold Masks for LEGO Colors and One Cumulative Mask
     cv::Mat greenMask;
@@ -63,6 +63,7 @@ int main(int argc, char** argv)
     {
         // LPF for Noise
         cv::blur(image[i], image[i], cv::Size(5,5));
+        cv::medianBlur(image[i], image[i], 3);
 
         // Find Contours Around Blobs
         vector< vector<cv::Point> > contours;
@@ -73,30 +74,47 @@ int main(int argc, char** argv)
         cv::cvtColor(image[i], imageInBGR, CV_GRAY2BGR);
         for(int j = 0; j < contours.size(); j++)
         {
-            // Draw Bounding Boxes Around LEGOs (Determined by Area)
-            cv::Rect r = cv::boundingRect(contours[j]);
-            cv::Mat patch; (image[i])(r).copyTo(patch);
-            float numWhites = (float) cv::countNonZero(patch);
-            float area = r.width * r.height;
+            // Draw Bounding Boxes Around LEGOs (Bounding Box with Minimum Area)
+            cv::RotatedRect rr = cv::minAreaRect(contours[j]);
+
+            // Adjust Parameters of Bounding Box
+            cv::Rect r = rr.boundingRect();
+            r.x = r.x<0 ? 0 : r.x;
+            r.y = r.y<0 ? 0 : r.y;
+            r.width  = r.width+r.x>image[i].cols  ? image[i].cols-r.x:r.width;
+            r.height = r.height+r.y>image[i].rows ? image[i].rows-r.y:r.height;
+
+            // Calculate Area and Density of ROI for LEGO Decision
+            cv::Mat roi; (image[i])(r).copyTo(roi);
+            float numWhites = (float) cv::countNonZero(roi);
+            float area = rr.size.width * rr.size.height;
             float density = numWhites/area;
             if(cv::contourArea(contours[j]) < LEGO_AREA_THRESHOLD ||
                 density < LEGO_DENSITY_THRESHOLD)
                 continue;
-            cv::Scalar green(0,255,0);
-            cv::rectangle(imageInBGR, r, green, 8);
 
+            // ~~~~~ DEBUG ~~~~~
             cout<<r.x<<" "<<r.y<<" "<<density<<endl;
-            // Find Centers
-            // cv::Point center(r.x+r.width/2, r.y+r.height/2);
+            // ~~~ END DEBUG ~~~
+
+            // Draw Rotated Rect
+            cv::Point2f points[4]; rr.points( points );
+            for( int k = 0; k < 4; k++ )
+            {
+                line( imageInBGR, points[k], points[(k+1)%4], bbcolor, 10);
+                cout<<points[k].x<<", "<<points[k].y<<endl;
+            } cout<<endl;
+
+            // Draw Centers of Bounding Boxes Them
             // double radius = 10;
-            // double lineThickness = 15;
-            // cv::circle(imageInBGR, center, radius, green, lineThickness);
+            // cv::circle(imageInBGR, rr.center, radius, bbcolor, 10);
         }
 
-        // DEBUG
+        // ~~~~~ DEBUG ~~~~~
         cv::Mat resized;
-        cv::resize(imageInBGR, resized, cv::Size(), .25, .25);
+        cv::resize(imageInBGR, resized, cv::Size(), .15, .15);
         cv::imshow(windowName[i] + "(blurred)", resized);
+        // ~~~ END DEBUG ~~~
 
         // Add Found Pieces to Cumulative Mask
         cumMask = (i==0) ? imageInBGR : cumMask + imageInBGR;
@@ -104,7 +122,7 @@ int main(int argc, char** argv)
 
     // Show Cumulative Mask
     cv::Mat resized;
-    cv::resize(cumMask, resized, cv::Size(), .25, .25);
+    cv::resize(cumMask, resized, cv::Size(), .15, .15);
     cv::imshow("Cumulative Mask", resized);
 
     // For Observation

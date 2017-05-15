@@ -10,6 +10,11 @@
  *******************************************************************/
 
 #define NUM_COLORS 5
+#define RED 0
+#define BLUE 1
+#define GREEN 2
+#define WHITE 3
+#define YELLOW 4
 #define RED_H_LO 0
 #define RED_S_LO 138
 #define RED_V_LO 0
@@ -77,6 +82,7 @@ namespace lw {
     } Instruction;
 
     typedef struct Project{
+        Colortab materials[5];
         int numInstr;
         Instruction instr[];
     } Project;
@@ -89,8 +95,11 @@ namespace lw {
 
     // Striped Cube
     // const Project striped_cube = {
-    //     .numInstr = ;
-    //     .instr[0] = {
+        // .materials[RED]  ={.c = red  , .sCount=0, .rCount=2,},
+        // .materials[WHITE]={.c = white, .sCount=0, .rCount=2,},
+        // .materials[BLUE] ={.c = blue , .sCount=0, .rCount=2,},
+        // .numInstr = ;
+        // .instr[0] = {
     //
     //     }
     // }
