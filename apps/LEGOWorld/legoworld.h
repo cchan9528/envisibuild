@@ -47,8 +47,11 @@
 #define YELLOW_V_HI 255
 #define SQ_SIDES_RATIO_UB 1.15
 #define SQ_SIDES_RATIO_LB 0.85
-#define LEGO_AREA_THRESHOLD 20000        // Inherent Scale Variance
-#define LEGO_DENSITY_THRESHOLD 0.15
+#define LEGO_S_AREA_LB 20000        // Inherent Scale Variance
+#define LEGO_S_AREA_UB 800000
+#define LEGO_R_AREA_LB 200000
+#define LEGO_R_AREA_UB 10000000
+#define LEGO_DENSITY_THRESHOLD 0.40
 
     /******************************************************
      *

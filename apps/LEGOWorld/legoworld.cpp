@@ -36,58 +36,13 @@ namespace lw{
 
     void countPieces(cv::Mat frame, Colortab * tab)
     {
-        // CANNY
-        cv::Mat frameInGray,t;
-        cv::cvtColor(frame, frameInGray, CV_BGR2GRAY);
-
-        cv::equalizeHist(frameInGray,frameInGray);
-        // cv::normalize(frameInGray, frameInGray);
-        cv::resize(frameInGray, t, cv::Size(), .15, .15);
-        cv::imshow("equalized", t);
-
-        cv::blur(frameInGray, frameInGray, cv::Size(5,5));
-        // cv::Mat cannyEdges;
-        // double hysLo = 15, hysHi = hysLo * 3;
-        // cv::Canny( frameInGray, cannyEdges, hysLo, hysHi );
-        // cv::Canny( frame, cannyEdges, hysLo, hysHi );
-        // int dxOrder = 1, dyOrder = 1;
-        // cv::Sobel(frameInGray, frameInGray, -1, dxOrder, dyOrder);
-        cv::Mat r1, r2, edgeMask=frameInGray.clone(), tmp;
-        // cv::Sobel(frameInGray, r1, -1, 3, 0, 15, 10);
-        // cv::Sobel(frameInGray, r2, -1, 0, 3, 15, 10);
-        // edgeMask = r1 + r2;
-
-        // cv::GaussianBlur(edgeMask, edgeMask, cv::Size(11,11), 200, 200);
-        // cv::blur(edgeMask, edgeMask, cv::Size(201,201));
-        // cv::erode(r,r, cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(3,3)));
-        // cv::dilate(edgeMask,tmp,cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(5,5)));
-        // cv::medianBlur(edgeMask, edgeMask, 31);
-        // cv::blur(edgeMask, edgeMask, cv::Size(201,201));
-        // edgeMask = tmp - edgeMask;
-        // cv::Laplacian(frameInGray, t, CV_8U , 5);
-        // edgeMask = edgeMask - t;
-
-        cv::Mat dst = frame.clone();
-        dst = cv::Scalar::all(0);
-        frame.copyTo(dst,edgeMask);
-        cv::Mat w;
-        cv::resize(edgeMask, w, cv::Size(), .15, .15);
-        // cv::resize(dst, w, cv::Size(), .15, .15);
-        cv::imshow("Canny Edges", w);
-
         cv::Mat frameInHSV;
         cv::cvtColor(frame, frameInHSV, cv::COLOR_BGR2HSV);
-        // END CANNY
-
-        color_t c = (*tab).c;
-
-        // DEBUG
-        string color;
-        cv::Mat maskInBGR;
-        // END DEBUG
 
         cv::Mat mask;
         cv::Scalar lb, ub;
+        string color;
+        color_t c = (*tab).c;
         switch(c)
         {
             case green:
@@ -105,28 +60,48 @@ namespace lw{
         }
         cv::inRange(frameInHSV, lb, ub, mask);
 
+        // Filter Noise
+        cv::blur(mask, mask, cv::Size(5,5));
+        cv::erode(mask, mask, getStructuringElement(cv::MORPH_RECT,
+                                                    cv::Size(3,3)));
+
+        // DEBUG
+        cv::Mat maskInBGR;
+        cv::cvtColor(mask, maskInBGR, CV_GRAY2BGR);
+        // END DEBUG
+
         // Find LEGOs
         vector< vector<cv::Point> > contours;
         cv::findContours(mask.clone(), contours,
                         CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE);
 
-        //DEBUG
-        if(contours.size()!=0)
-            cv::cvtColor(mask, maskInBGR, CV_GRAY2BGR);
-        // END DEBUG
-
         for(int i = 0; i < contours.size(); i++)
         {
-            // Calculate (Avg) Density of White Pixels
-            cv::Rect r = cv::boundingRect(contours[i]);
-            cv::Mat patch; mask(r).copyTo(patch);
-            float numWhites = (float) cv::countNonZero(patch);
-            float area = r.width * r.height;
-            float density = numWhites/area;
+            // Draw Bounding Boxes Around LEGOs (Bounding Box with Minimum Area)
+            cv::RotatedRect rr = cv::minAreaRect(contours[i]);
+
+            // Extract ROI
+            cv::Rect r = rr.boundingRect();
+            r.x = r.x<0 ? 0 : r.x;
+            r.y = r.y<0 ? 0 : r.y;
+            r.width  = r.width+r.x>mask.cols  ? mask.cols-r.x:r.width;
+            r.height = r.height+r.y>mask.rows ? mask.rows-r.y:r.height;
+            cv::Mat roi; (mask)(r).copyTo(roi);
+
+            // Calculate Area and (Average) Density of ROI
+            double numWhites = (double) cv::countNonZero(roi);
+            double area = contourArea(contours[i]);
+            double density = numWhites/area;
+
+            // Find Verticies of Polygonal Approximation of Contour
+            vector<cv::Point> verts;
+            double deviation = .02 * cv::arcLength(contours[i], true);
+            cv::approxPolyDP(contours[i], verts, deviation, true);
 
             // Ignore Noise
-            if(cv::contourArea(contours[i]) < LEGO_AREA_THRESHOLD ||
-                density < LEGO_DENSITY_THRESHOLD)
+            if( (!(LEGO_S_AREA_LB <= area && area <= LEGO_S_AREA_UB) &&
+                !(LEGO_R_AREA_LB <= area && area <= LEGO_R_AREA_UB)) ||
+                density < LEGO_DENSITY_THRESHOLD )
                 continue;
 
             // Update Color Tab
@@ -136,9 +111,20 @@ namespace lw{
             else
                 (*tab).rCount++;
 
-            //DEBUG
+            // DEBUG
             cv::Scalar green(0,255,0);
-            cv::rectangle(maskInBGR, r, green, 8);
+            double radius = 25;
+            int thickness = 10;
+            cv::Point2f points[4]; rr.points( points );
+            for( int k = 0; k < 4; k++ )
+                line( maskInBGR, points[k], points[(k+1)%4], green, thickness);
+            cout<<"Vertex Coordinates for Contour "<< i <<endl;
+            for(int l = 0; l < verts.size(); l++)
+            {
+                cv::circle(maskInBGR, verts[l], radius, green, thickness);
+                cout<<verts[l].x<<", "<<verts[l].y<<endl;
+            }cout<<endl;
+            // END DEBUG
         }
         // DEBUG
         if(contours.size()!=0)
