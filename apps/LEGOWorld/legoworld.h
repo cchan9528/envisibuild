@@ -81,7 +81,7 @@ namespace lw {
     } Instruction;
 
     typedef struct Project{
-        const Colortab materials[5];
+        Colortab materials[5];
         int numInstr;
         Instruction instr[];
     } Project;
@@ -94,9 +94,9 @@ namespace lw {
 
     // Striped Cube
     const Project stripedcube_ref = {
-        .materials[red]   = {.c = red  , .sCount=0, .rCount=2,},
-        .materials[white] = {.c = white, .sCount=0, .rCount=2,},
-        .materials[blue]  = {.c = blue , .sCount=0, .rCount=2,},
+        .materials[red]   = {.c = red  , .sCount=0, .rCount=2},
+        .materials[white] = {.c = white, .sCount=0, .rCount=2},
+        .materials[blue]  = {.c = blue , .sCount=0, .rCount=2},
         // .numInstr = ;
         // .instr[0] = {
         //
@@ -105,11 +105,13 @@ namespace lw {
 
     // Staircase
     const Project staircase_ref = {
+        .materials[red] = {.c = red, .sCount=2, .rCount=2},
 
     };
 
     // Tower
     const Project tower_ref = {
+        .materials[green] = {.c = red, .sCount=3, .rCount=0},
 
     };
 
@@ -118,7 +120,7 @@ namespace lw {
      * Helper Functions
      *
      ******************************************************/
-
+    project_t strToProject(std::string s);
     void countPieces(cv::Mat frameInHSV, Colortab* tab);
     void countPieces(cv::Mat frameInHSV, Colortab* tabs, int tabsSize);
     void materialsReport(lw::Colortab * tabs, int tabsSize);

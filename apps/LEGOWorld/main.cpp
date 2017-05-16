@@ -8,21 +8,15 @@ using namespace std;
 int main(int argc, char** argv)
 {
     // Verify the Frame Source
-    if(argc!=2)
+    if(argc!=3)
     {
-        cout<<"\nUsage: ./LEGOWorld [filename]\n"<<endl;
+        cout<<"\nUsage: ./LEGOWorld [framesource] [filename]\n"<<endl;
         return -1;
     }
+    char * framesource = argv[1];
+    project_t projectName = lw::strToProject(argv[2]);
 
-    // Load Frame from Source
-    cv::Mat frame = cv::imread(argv[1], CV_LOAD_IMAGE_COLOR);
-    if(!frame.data)
-    {
-        cout<<"\nRead Frame Error.\nLEGOFinder Terminated\n"<<endl;
-        return -1;
-    }
-
-    // Determine Current Materials
+    // Keep Tabs on Current Materials
     lw::Colortab colortabs[5] = {
         {.c = red,  .sCount = 0, .rCount = 0},
         {.c = yellow,   .sCount = 0, .rCount = 0},
@@ -31,14 +25,20 @@ int main(int argc, char** argv)
         {.c = white,  .sCount = 0, .rCount = 0}
     };
 
+    // Load Frame from Source
+    cv::Mat frame = cv::imread(framesource, CV_LOAD_IMAGE_COLOR);
+    if(!frame.data)
+    {
+        cout<<"\nRead Frame Error.\nLEGOFinder Terminated\n"<<endl;
+        return -1;
+    }
+
+    if(lw::projectPossible(projectName,frame,colortabs,NUM_COLORS))
+        lw::materialsReport(colortabs, NUM_COLORS);
+
     // DEBUG
     cv::Mat resized;
     cv::resize(frame, resized, cv::Size(), .15, .15);
     cv::imshow("original", resized);
     // END DEBUG
-
-    // lw::countPieces(frame, colortabs, 5);
-    // lw::materialsReport(colortabs, 5);
-    lw::projectPossible(stripedcube, frame, colortabs, NUM_COLORS);
-    lw::materialsReport(colortabs, NUM_COLORS);
 }

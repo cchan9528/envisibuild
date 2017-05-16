@@ -66,6 +66,17 @@ namespace lw{
                 return "";
         }
     }
+    project_t strToProject(string s)
+    {
+        if(s=="stripedcube" || s == "cube")
+            return stripedcube;
+        else if(s=="staircase" || s=="stairs")
+            return staircase;
+        else if(s=="tower")
+            return tower;
+        else
+            return none;
+    }
 
     shape_t findShape(cv::RotatedRect rr, int numVerts, double area,
                         int frW, int frH)
@@ -97,8 +108,8 @@ namespace lw{
            else if( (LEGO_R_AREA_LB <= area && area <= LEGO_R_AREA_UB) )
                return rect;
        }
-       else
-           return unkwn;
+
+       return unkwn;
 
     // ~~~~~ DEBUG ~~~~~~
     // cout<<"Finding Shape"<<endl;
@@ -279,6 +290,9 @@ namespace lw{
                     return;
             }
         }
+        cout<<"\n\tReport UNFINISHED if unknown > 0"<<endl;
+        cout<<"\t\tWill Reevaluate"<<endl;
+        cout<<"\n -1 denotes not needed for project (not counted)"<<endl;
         cout<<"\n//////////////////  End Report  //////////////////\n"<<endl;
     }
 
@@ -296,6 +310,11 @@ namespace lw{
             case tower:
                 projectRef = &tower_ref; break;
             default:
+                cout<<"\n\nProject not available."<<endl;
+                cout<<"Please choose an available project:\n"\
+                    <<"    . stripedcube\n"\
+                    <<"    . staircase\n"\
+                    <<"    . tower\n"<<endl<<endl;
                 return false;
         }
 
@@ -306,7 +325,14 @@ namespace lw{
 
             // Nothing is Needed of This Color
             if( numNeeded == 0 )
+            {
+                // ~~~~~ DEBUG ~~~~~
+                colortabs[color].sCount = -1;
+                colortabs[color].rCount = -1;
+                colortabs[color].uCount = -1;
+                // ~~~ END DEBUG ~~~
                 continue;
+            }
             else
             {
                 // Update Color Tabs
@@ -315,28 +341,33 @@ namespace lw{
                 // Cannot Obtain Accurate Count; Assume Possible
                 if(colortabs[color].uCount != 0)
                 {
-                    cout<<"***** Project may be possible; "\
-                        << "please spread the pieces out for better evaluation"\
-                        << "\n\n\nMaterials Report UNFINISHED \n" \
+                    cout<<"********************************************* "\
+                        << "\n\n\tProject may be possible\n"\
+                        << "  Will evaluate again once pieces in frame"\
+                        << "\n\n       Materials Report UNFINISHED \n\n" \
+                        <<"********************************************* "\
                         <<endl;
-                    return true;
+                    continue;
                 }
 
                 // Check Enough Squares Present
                 if(colortabs[color].sCount != projBlocks[color].sCount)
                 {
-                    cout<<"Need more "<<colorToStr(color)<<"  squares"<< endl;
+                    cout<<"***************************************\n"<<endl;
+                    cout<<"\tNeed more "<<colorToStr(color)<<" squares"<< endl;
+                    cout<<"\n***************************************"<<endl;
                     return false;
                 }
                 // Check Enough Rectangles Present
                 else if(colortabs[color].rCount != projBlocks[color].rCount)
                 {
-                    cout<<"Need more "<<colorToStr(color)<<"  rects"<< endl;
+                    cout<<"***************************************\n"<<endl;
+                    cout<<"\tNeed more "<<colorToStr(color)<<" rects"<< endl;
+                    cout<<"\n***************************************"<<endl;
                     return false;
                 }
             }
         }
-        cout<<"Project Possible"<<endl;
         return true;
     }
 }
