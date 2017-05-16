@@ -4,7 +4,11 @@
 #include <opencv2/imgproc.hpp>
 #include "legohsvcolors.hpp"
 
-#define LEGO_AREA_THRESHOLD 20000        // Inherent Scale Variance
+#define LEGO_S_AREA_LB 20000        // Inherent Scale Variance
+#define LEGO_S_AREA_UB 800000
+#define LEGO_R_AREA_LB 200000
+#define LEGO_R_AREA_UB 10000000
+
 #define LEGO_DENSITY_THRESHOLD 0.40
 
 using namespace std;
@@ -63,7 +67,8 @@ int main(int argc, char** argv)
     {
         // LPF for Noise
         cv::blur(image[i], image[i], cv::Size(5,5));
-        cv::medianBlur(image[i], image[i], 3);
+        cv::erode(image[i], image[i], getStructuringElement(cv::MORPH_RECT,
+                                                            cv::Size(3,3)));
 
         // Find Contours Around Blobs
         vector< vector<cv::Point> > contours;
@@ -84,30 +89,39 @@ int main(int argc, char** argv)
             r.width  = r.width+r.x>image[i].cols  ? image[i].cols-r.x:r.width;
             r.height = r.height+r.y>image[i].rows ? image[i].rows-r.y:r.height;
 
-            // Calculate Area and Density of ROI for LEGO Decision
+            // Calculate Area and Density of ROI
             cv::Mat roi; (image[i])(r).copyTo(roi);
-            float numWhites = (float) cv::countNonZero(roi);
-            float area = rr.size.width * rr.size.height;
-            float density = numWhites/area;
-            if(cv::contourArea(contours[j]) < LEGO_AREA_THRESHOLD ||
-                density < LEGO_DENSITY_THRESHOLD)
-                continue;
+            double numWhites = (double) cv::countNonZero(roi);
+            double area = contourArea(contours[j]);
+            double density = numWhites/area;
 
-            // ~~~~~ DEBUG ~~~~~
-            cout<<r.x<<" "<<r.y<<" "<<density<<endl;
-            // ~~~ END DEBUG ~~~
+            // Find Verticies of Polygonal Approximation of Contour
+            vector<cv::Point> verts;
+            double deviation = .02 * cv::arcLength(contours[j], true);
+            cv::approxPolyDP(contours[j], verts, deviation, true);
+
+            // LEGO Decision
+            if( (!(LEGO_S_AREA_LB <= area && area <= LEGO_S_AREA_UB) &&
+                !(LEGO_R_AREA_LB <= area && area <= LEGO_R_AREA_UB)) ||
+                density < LEGO_DENSITY_THRESHOLD )
+                continue;
 
             // Draw Rotated Rect
             cv::Point2f points[4]; rr.points( points );
             for( int k = 0; k < 4; k++ )
-            {
                 line( imageInBGR, points[k], points[(k+1)%4], bbcolor, 10);
-                cout<<points[k].x<<", "<<points[k].y<<endl;
-            } cout<<endl;
 
             // Draw Centers of Bounding Boxes Them
-            // double radius = 10;
+            double radius = 25;
             // cv::circle(imageInBGR, rr.center, radius, bbcolor, 10);
+
+            // Draw Verticies
+            cout<<"Vertex Coordinates for Contour "<< j <<endl;
+            for(int l = 0; l < verts.size(); l++)
+            {
+                cv::circle(imageInBGR, verts[l], radius, bbcolor, 10);
+                cout<<verts[l].x<<", "<<verts[l].y<<endl;
+            }cout<<endl;
         }
 
         // ~~~~~ DEBUG ~~~~~
