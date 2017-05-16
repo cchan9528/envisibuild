@@ -18,15 +18,99 @@ cv::Scalar whiteUB(WHITE_H_HI, WHITE_S_HI, WHITE_V_HI);
 namespace lw{
     using namespace std;
 
-    shape_t findShape(cv::Rect boundingBox)
+    string colorToStr(int c)
     {
-        float wToh = ((float)boundingBox.width)/((float)boundingBox.height);
-        float hTow = 1/wToh;
-        if((SQ_SIDES_RATIO_LB <= wToh && wToh <= SQ_SIDES_RATIO_UB)
-            && (SQ_SIDES_RATIO_LB <= hTow && hTow <= SQ_SIDES_RATIO_UB))
-            return square;
-        else
-            return rect;
+        switch(c)
+        {
+            case red:
+                return "red";
+            case yellow:
+                return "yellow";
+            case green:
+                return "green";
+            case blue:
+                return "blue";
+            case white:
+                return "white";
+            default:
+                return "";
+        }
+    }
+    string colorToStr(color_t c)
+    {
+        switch(c)
+        {
+            case red:
+                return "red";
+            case yellow:
+                return "yellow";
+            case green:
+                return "green";
+            case blue:
+                return "blue";
+            case white:
+                return "white";
+            default:
+                return "";
+        }
+    }
+    string shapeToStr(shape_t s)
+    {
+        switch(s)
+        {
+            case square:
+                return "square";
+            case rect:
+                return "rectangle";
+            default:
+                return "";
+        }
+    }
+
+    shape_t findShape(cv::RotatedRect rr, int numVerts, double area,
+                        int frW, int frH)
+    {
+        // Corners of the Rotated Rectangle
+        cv::Point tl(rr.center.x-(rr.size.width/2),
+                    rr.center.y-(rr.size.height/2));
+        cv::Point tr(rr.center.x+(rr.size.width/2),
+                    rr.center.y-(rr.size.height/2));
+        cv::Point bl(rr.center.x-(rr.size.width/2),
+                    rr.center.y+(rr.size.height/2));
+        cv::Point br(rr.center.x+(rr.size.width/2),
+                    rr.center.y+(rr.size.height/2));
+
+        // Validate Location and Shape of Bounding Rectangle
+        if(numVerts == 4 &&
+           ((0<=tl.x && tl.x<=frW) && (0<=tl.y && tl.y<=frH)) &&
+           ((0<=bl.x && tl.x<=frW) && (0<=bl.y && bl.y<=frH)) &&
+           ((0<=tr.x && tr.x<=frW) && (0<=tr.y && tr.y<=frH)) &&
+           ((0<=br.x && tr.x<=frW) && (0<=br.y && br.y<=frH)))
+       {
+           // Decide Shape
+           float wToh = ((float)rr.size.width)/((float)rr.size.height);
+           float hTow = 1/wToh;
+           if( (LEGO_S_AREA_LB <= area && area <= LEGO_S_AREA_UB) &&
+               (SQ_SIDES_RATIO_LB <= wToh && wToh <= SQ_SIDES_RATIO_UB) &&
+               (SQ_SIDES_RATIO_LB <= hTow && hTow <= SQ_SIDES_RATIO_UB))
+               return square;
+           else if( (LEGO_R_AREA_LB <= area && area <= LEGO_R_AREA_UB) )
+               return rect;
+       }
+       else
+           return unkwn;
+
+    // ~~~~~ DEBUG ~~~~~~
+    // cout<<"Finding Shape"<<endl;
+    // cout<<frW << " " << frH<<endl;
+    // cout<< "tl: ("<< tl.x << ", " << tl.y << ")" << endl;
+    // cout<< "tr: ("<< tr.x << ", " << tr.y << ")" << endl;
+    // cout<< "bl: ("<< bl.x << ", " << bl.y << ")" << endl;
+    // cout<< "br: ("<< br.x << ", " << br.y << ")" << endl;
+    //
+    // cout<<"wToh: "<<wToh<<endl;
+    // cout<<"hToW: "<<hTow<<endl;
+    // ~~~ END DEBUG ~~~
     }
 
     void countPieces(cv::Mat frame, lw::Colortab* tabs, int tabsSize)
@@ -41,23 +125,23 @@ namespace lw{
 
         cv::Mat mask;
         cv::Scalar lb, ub;
-        string color;
         color_t c = (*tab).c;
         switch(c)
         {
             case green:
-                lb = greenLB; ub = greenUB; color="Green"; break;
+                lb = greenLB; ub = greenUB; break;
             case blue:
-                lb = blueLB; ub = blueUB; color="Blue"; break;
+                lb = blueLB; ub = blueUB; break;
             case red:
-                lb = redLB; ub = redUB; color="Red"; break;
+                lb = redLB; ub = redUB; break;
             case yellow:
-                lb = yellowLB; ub = yellowUB; color="Yellow"; break;
+                lb = yellowLB; ub = yellowUB; break;
             case white:
-                lb = whiteLB; ub = whiteUB; color="White"; break;
+                lb = whiteLB; ub = whiteUB; break;
             default:
                 return;
         }
+        string color = colorToStr(c);
         cv::inRange(frameInHSV, lb, ub, mask);
 
         // Filter Noise
@@ -97,19 +181,29 @@ namespace lw{
             vector<cv::Point> verts;
             double deviation = .02 * cv::arcLength(contours[i], true);
             cv::approxPolyDP(contours[i], verts, deviation, true);
+            int numVerts = verts.size();
 
             // Ignore Noise
-            if( (!(LEGO_S_AREA_LB <= area && area <= LEGO_S_AREA_UB) &&
-                !(LEGO_R_AREA_LB <= area && area <= LEGO_R_AREA_UB)) ||
-                density < LEGO_DENSITY_THRESHOLD )
+            if(!(LEGO_S_AREA_LB <= area) || (density < LEGO_DENSITY_THRESHOLD))
                 continue;
 
             // Update Color Tab
-            shape_t s = findShape(r);
+            shape_t s = findShape(rr, numVerts, area, mask.cols, mask.rows);
             if(s == square)
+            {
+                cout<<"Square"<<endl;
                 (*tab).sCount++;
-            else
+            }
+            else if(s == rect)
+            {
+                cout<<"Rect"<<endl;
                 (*tab).rCount++;
+            }
+            else
+            {
+                cout<<"Unkwn"<<endl;
+                (*tab).uCount++;
+            }
 
             // DEBUG
             cv::Scalar green(0,255,0);
@@ -134,7 +228,7 @@ namespace lw{
             cv::imshow(color + "(blurred)", resized);
             while(true)
                 if(cv::waitKey(30) == 27)
-                {    cout<<"\n\n\nUser held esc key to terminate program"<<endl; break;}
+                {    cout<<"ESC pressed"<<endl<<endl; break;}
         }
         // END DEBUG
     }
@@ -147,33 +241,39 @@ namespace lw{
             Colortab t = *(tabs+i);
             int numS = t.sCount;
             int numR = t.rCount;
+            int numU = t.uCount;
             color_t c  = t.c;
             switch(c)
             {
                 case green:
                     cout<<"Green Tab: "\
                         << numS << " squares, "\
-                        << numR << " rectangles" << endl;
+                        << numR << " rectangles, "\
+                        << numU << " unknowns" << endl;
                     break;
                 case blue:
                     cout<<"Blue Tab: "\
                         << numS << " squares, "\
-                        << numR << " rectangles" << endl;
+                        << numR << " rectangles, "\
+                        << numU << " unknowns" << endl;
                     break;
                 case red:
                     cout<<"Red Tab: "\
                         << numS << " squares, "\
-                        << numR << " rectangles" << endl;
+                        << numR << " rectangles, "\
+                        << numU << " unknowns" << endl;
                     break;
                 case yellow:
                     cout<<"Yellow Tab: "\
                         << numS << " squares, "\
-                        << numR << " rectangles" << endl;
+                        << numR << " rectangles, "\
+                        << numU << " unknowns" << endl;
                     break;
                 case white:
                     cout<<"White Tab: "\
                         << numS << " squares, "\
-                        << numR << " rectangles" << endl;
+                        << numR << " rectangles, "\
+                        << numU << " unknowns" << endl;
                     break;
                 default:
                     return;
@@ -183,13 +283,60 @@ namespace lw{
     }
 
     bool projectPossible(project_t project, cv::Mat frame,
-                        Colortab * tabs, int tabsSize)
+                        Colortab * colortabs, int numcolors)
     {
-        // Count the number of pieces
-        for(int i = 0; i < tabsSize; i++)
-            countPieces(frame, (tabs+i));
+        // Establish Project Reference
+        const Project * projectRef;
+        switch(project)
+        {
+            case stripedcube:
+                projectRef = &stripedcube_ref; break;
+            case staircase:
+                projectRef = &staircase_ref; break;
+            case tower:
+                projectRef = &tower_ref; break;
+            default:
+                return false;
+        }
 
-        // Compare with Needed Project Materials
-        return false;
+        const Colortab * projBlocks = (*projectRef).materials;
+        for(int color = red; color < numcolors; color++)
+        {
+            int numNeeded = projBlocks[color].sCount + projBlocks[color].rCount;
+
+            // Nothing is Needed of This Color
+            if( numNeeded == 0 )
+                continue;
+            else
+            {
+                // Update Color Tabs
+                countPieces(frame, (colortabs+color));
+
+                // Cannot Obtain Accurate Count; Assume Possible
+                if(colortabs[color].uCount != 0)
+                {
+                    cout<<"***** Project may be possible; "\
+                        << "please spread the pieces out for better evaluation"\
+                        << "\n\n\nMaterials Report UNFINISHED \n" \
+                        <<endl;
+                    return true;
+                }
+
+                // Check Enough Squares Present
+                if(colortabs[color].sCount != projBlocks[color].sCount)
+                {
+                    cout<<"Need more "<<colorToStr(color)<<"  squares"<< endl;
+                    return false;
+                }
+                // Check Enough Rectangles Present
+                else if(colortabs[color].rCount != projBlocks[color].rCount)
+                {
+                    cout<<"Need more "<<colorToStr(color)<<"  rects"<< endl;
+                    return false;
+                }
+            }
+        }
+        cout<<"Project Possible"<<endl;
+        return true;
     }
 }

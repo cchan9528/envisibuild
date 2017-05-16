@@ -10,7 +10,7 @@ int main(int argc, char** argv)
     // Verify the Frame Source
     if(argc!=2)
     {
-        cout<<"\nUsage: ./LEGOFinder [filename]\n"<<endl;
+        cout<<"\nUsage: ./LEGOWorld [filename]\n"<<endl;
         return -1;
     }
 
@@ -23,11 +23,11 @@ int main(int argc, char** argv)
     }
 
     // Determine Current Materials
-    lw::Colortab tabs[5] = {
-        {.c = green,  .sCount = 0, .rCount = 0},
-        {.c = blue,   .sCount = 0, .rCount = 0},
-        {.c = red,    .sCount = 0, .rCount = 0},
-        {.c = yellow, .sCount = 0, .rCount = 0},
+    lw::Colortab colortabs[5] = {
+        {.c = red,  .sCount = 0, .rCount = 0},
+        {.c = yellow,   .sCount = 0, .rCount = 0},
+        {.c = green,    .sCount = 0, .rCount = 0},
+        {.c = blue, .sCount = 0, .rCount = 0},
         {.c = white,  .sCount = 0, .rCount = 0}
     };
 
@@ -37,7 +37,8 @@ int main(int argc, char** argv)
     cv::imshow("original", resized);
     // END DEBUG
 
-    lw::countPieces(frame, tabs, 5);
-    lw::materialsReport(tabs, 5);
-
+    // lw::countPieces(frame, colortabs, 5);
+    // lw::materialsReport(colortabs, 5);
+    lw::projectPossible(stripedcube, frame, colortabs, NUM_COLORS);
+    lw::materialsReport(colortabs, NUM_COLORS);
 }

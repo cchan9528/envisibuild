@@ -10,11 +10,6 @@
  *******************************************************************/
 
 #define NUM_COLORS 5
-#define RED 0
-#define BLUE 1
-#define GREEN 2
-#define WHITE 3
-#define YELLOW 4
 #define RED_H_LO 0
 #define RED_S_LO 138
 #define RED_V_LO 0
@@ -45,12 +40,12 @@
 #define YELLOW_H_HI 45
 #define YELLOW_S_HI 255
 #define YELLOW_V_HI 255
-#define SQ_SIDES_RATIO_UB 1.15
 #define SQ_SIDES_RATIO_LB 0.85
+#define SQ_SIDES_RATIO_UB 1.15
 #define LEGO_S_AREA_LB 20000        // Inherent Scale Variance
-#define LEGO_S_AREA_UB 800000
-#define LEGO_R_AREA_LB 200000
-#define LEGO_R_AREA_UB 10000000
+#define LEGO_S_AREA_UB 500000
+#define LEGO_R_AREA_LB 500001
+#define LEGO_R_AREA_UB 1000000
 #define LEGO_DENSITY_THRESHOLD 0.40
 
     /******************************************************
@@ -60,9 +55,9 @@
      ******************************************************/
 
 // enum bool { false, true };
-enum color_t { red, blue, green, yellow, white };
+enum color_t { red=0, blue=3, green=2, yellow=1, white=4 };
 
-enum shape_t { square, rect };
+enum shape_t { square, rect, unkwn };
 
 enum connection_t { ss, rr, rs, sr };
 
@@ -74,6 +69,7 @@ namespace lw {
         color_t c;
         int sCount;
         int rCount;
+        int uCount;
     } Colortab;
 
     typedef struct Building{
@@ -85,7 +81,7 @@ namespace lw {
     } Instruction;
 
     typedef struct Project{
-        Colortab materials[5];
+        const Colortab materials[5];
         int numInstr;
         Instruction instr[];
     } Project;
@@ -97,19 +93,25 @@ namespace lw {
      ******************************************************/
 
     // Striped Cube
-    // const Project striped_cube = {
-        // .materials[RED]  ={.c = red  , .sCount=0, .rCount=2,},
-        // .materials[WHITE]={.c = white, .sCount=0, .rCount=2,},
-        // .materials[BLUE] ={.c = blue , .sCount=0, .rCount=2,},
+    const Project stripedcube_ref = {
+        .materials[red]   = {.c = red  , .sCount=0, .rCount=2,},
+        .materials[white] = {.c = white, .sCount=0, .rCount=2,},
+        .materials[blue]  = {.c = blue , .sCount=0, .rCount=2,},
         // .numInstr = ;
         // .instr[0] = {
-    //
-    //     }
-    // }
+        //
+        // }
+    };
 
     // Staircase
+    const Project staircase_ref = {
+
+    };
 
     // Tower
+    const Project tower_ref = {
+
+    };
 
     /******************************************************
      *

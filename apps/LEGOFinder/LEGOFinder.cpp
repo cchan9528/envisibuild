@@ -5,10 +5,9 @@
 #include "legohsvcolors.hpp"
 
 #define LEGO_S_AREA_LB 20000        // Inherent Scale Variance
-#define LEGO_S_AREA_UB 800000
-#define LEGO_R_AREA_LB 200000
-#define LEGO_R_AREA_UB 10000000
-
+#define LEGO_S_AREA_UB 500000
+#define LEGO_R_AREA_LB 500001
+#define LEGO_R_AREA_UB 1000000
 #define LEGO_DENSITY_THRESHOLD 0.40
 
 using namespace std;
@@ -101,8 +100,8 @@ int main(int argc, char** argv)
             cv::approxPolyDP(contours[j], verts, deviation, true);
 
             // LEGO Decision
-            if( (!(LEGO_S_AREA_LB <= area && area <= LEGO_S_AREA_UB) &&
-                !(LEGO_R_AREA_LB <= area && area <= LEGO_R_AREA_UB)) ||
+            if( !(LEGO_S_AREA_LB <= area && area <= LEGO_S_AREA_UB) ||
+                !(LEGO_R_AREA_LB <= area && area <= LEGO_R_AREA_UB) ||
                 density < LEGO_DENSITY_THRESHOLD )
                 continue;
 
