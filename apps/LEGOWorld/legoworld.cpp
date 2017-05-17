@@ -4,6 +4,92 @@
 #include <opencv2/imgproc.hpp>
 #include <iostream>
 
+#define IMAGE 1
+#define VIDEO 2
+#define RED_H_LO 0
+#define RED_S_LO 138
+#define RED_V_LO 0
+#define RED_H_HI 12
+#define RED_S_HI 255
+#define RED_V_HI 255
+#define BLUE_H_LO 70
+#define BLUE_S_LO 0
+#define BLUE_V_LO 0
+#define BLUE_H_HI 180
+#define BLUE_S_HI 255
+#define BLUE_V_HI 255
+#define GREEN_H_LO 30
+#define GREEN_S_LO 100
+#define GREEN_V_LO 70
+#define GREEN_H_HI 70
+#define GREEN_S_HI 255
+#define GREEN_V_HI 255
+#define WHITE_H_LO 0
+#define WHITE_S_LO 0
+#define WHITE_V_LO 210
+#define WHITE_H_HI 180
+#define WHITE_S_HI 120
+#define WHITE_V_HI 255
+#define YELLOW_H_LO 15
+#define YELLOW_S_LO 200
+#define YELLOW_V_LO 180
+#define YELLOW_H_HI 45
+#define YELLOW_S_HI 255
+#define YELLOW_V_HI 255
+
+/******************************************************
+ *
+ * Project Instructions
+ *
+ ******************************************************/
+
+// Striped Cube
+lw::Instruction stripedcube_instr[5] = {
+    { .op = PLC, .r1 = "BR", .r2 = "BR", .r3 = "LL"},
+    { .op = STK, .r1 = "NW", .r2 = "WR", .r3 = "NN"},
+    { .op = STK, .r1 = "SW", .r2 = "WR", .r3 = "NN"},
+    { .op = STK, .r1 = "NE", .r2 = "RR", .r3 = "NN"},
+    { .op = STK, .r1 = "SE", .r2 = "RR", .r3 = "NN"}
+};
+lw::Project stripedcube_ref = {
+    .materials[red]   = {.c = red  , .sCount=0, .rCount=2},
+    .materials[white] = {.c = white, .sCount=0, .rCount=2},
+    .materials[blue]  = {.c = blue , .sCount=0, .rCount=2},
+    .numInstr = 5,
+    .instr = stripedcube_instr,
+};
+
+// Staircase
+lw::Instruction staircase_instr[3] = {
+    { .op = PLC, .r1 = "RR", .r2 = "RS", .r3 = "SS"},
+    { .op = STK, .r1 = "NN", .r2 = "RR", .r3 = "NN"},
+    { .op = STK, .r1 = "NN", .r2 = "RS", .r3 = "CC"}
+};
+lw::Project staircase_ref = {
+    .materials[red] = {.c = red, .sCount=2, .rCount=2},
+    .numInstr = 3,
+    .instr = staircase_instr,
+};
+
+// Tower
+lw::Instruction tower_instr[3] = {
+    { .op = PLC, .r1 = "GS", .r2 = "", .r3 = ""},
+    { .op = STK, .r1 = "CC", .r2 = "GS", .r3 = "CC"},
+    { .op = STK, .r1 = "CC", .r2 = "GS", .r3 = "CC"}
+};
+lw::Project tower_ref = {
+    .materials[green] = {.c = green, .sCount=0, .rCount=0},
+    .numInstr = 3,
+    .instr = tower_instr,
+};
+
+
+/******************************************************
+ *
+ * HSV Color Bounds
+ *
+ ******************************************************/
+
 cv::Scalar greenLB(GREEN_H_LO, GREEN_S_LO, GREEN_V_LO);
 cv::Scalar greenUB(GREEN_H_HI, GREEN_S_HI, GREEN_V_HI);
 cv::Scalar blueLB(BLUE_H_LO, BLUE_S_LO, BLUE_V_LO);
@@ -14,6 +100,35 @@ cv::Scalar yellowLB(YELLOW_H_LO, YELLOW_S_LO, YELLOW_V_LO);
 cv::Scalar yellowUB(YELLOW_H_HI, YELLOW_S_HI, YELLOW_V_HI);
 cv::Scalar whiteLB(WHITE_H_LO, WHITE_S_LO, WHITE_V_LO);
 cv::Scalar whiteUB(WHITE_H_HI, WHITE_S_HI, WHITE_V_HI);
+
+int findFiletype(char * s)
+{
+    int i = 0;
+    while(1) {i++; if(s[i]==0){break;}}
+    if(i<5)
+    {
+        return -1;
+    }
+    else
+    {
+        switch(s[i-4])
+        {
+            case 'j':
+            case 'p':
+                return IMAGE;
+            case 'm':
+                return VIDEO;
+            default:
+                return -1;
+        }
+    }
+}
+
+/******************************************************
+ *
+ * Helper Functions
+ *
+ ******************************************************/
 
 namespace lw{
     using namespace std;
