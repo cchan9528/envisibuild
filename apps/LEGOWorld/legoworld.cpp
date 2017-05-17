@@ -63,7 +63,7 @@ lw::Instruction stripedcube_instr[5] = {
     { .op = STK, .r1 = "NE", .r2 = "RR", .r3 = "NN"},
     { .op = STK, .r1 = "SE", .r2 = "RR", .r3 = "NN"}
 };
-lw::Project stripedcube_ref = {
+const lw::Project stripedcube_ref = {
     .materials[red]   = {.c = red  , .sCount=0, .rCount=2},
     .materials[white] = {.c = white, .sCount=0, .rCount=2},
     .materials[blue]  = {.c = blue , .sCount=0, .rCount=2},
@@ -77,7 +77,7 @@ lw::Instruction staircase_instr[3] = {
     { .op = STK, .r1 = "NN", .r2 = "RR", .r3 = "NN"},
     { .op = STK, .r1 = "NN", .r2 = "RS", .r3 = "CC"}
 };
-lw::Project staircase_ref = {
+const lw::Project staircase_ref = {
     .materials[red] = {.c = red, .sCount=2, .rCount=2},
     .numInstr = 3,
     .instr = staircase_instr,
@@ -89,7 +89,7 @@ lw::Instruction tower_instr[3] = {
     { .op = STK, .r1 = "CC", .r2 = "GS", .r3 = "CC"},
     { .op = STK, .r1 = "CC", .r2 = "GS", .r3 = "CC"}
 };
-lw::Project tower_ref = {
+const lw::Project tower_ref = {
     .materials[green] = {.c = green, .sCount=3, .rCount=0},
     .numInstr = 3,
     .instr = tower_instr,
@@ -112,6 +112,8 @@ cv::Scalar yellowLB(YELLOW_H_LO, YELLOW_S_LO, YELLOW_V_LO);
 cv::Scalar yellowUB(YELLOW_H_HI, YELLOW_S_HI, YELLOW_V_HI);
 cv::Scalar whiteLB(WHITE_H_LO, WHITE_S_LO, WHITE_V_LO);
 cv::Scalar whiteUB(WHITE_H_HI, WHITE_S_HI, WHITE_V_HI);
+
+cv::Scalar Green(0,255,0);
 
 int fileType(char * s)
 {
@@ -392,7 +394,7 @@ namespace lw{
             }
 
             // DEBUG
-            cv::Scalar green(0,255,0);
+            //cv::Scalar green(0,255,0);
             double radius = 25;
             int thickness = 10;
             cv::Point2f points[4]; rr.points( points );
@@ -526,6 +528,9 @@ namespace lw{
         cv::Mat mask(frame.rows, frame.cols, CV_8UC1, cv::Scalar(0));
         mask(cv::Rect(mask.cols/4, mask.rows/4, mask.cols/2, mask.rows/2))=255;
         ws->bounds = mask;
+        ws->cc = cv::Point2f(mask.cols/2, mask.rows/2);
+        ws->nw = cv::Point2f(mask.cols/4, mask.rows/4);
+        ws->se = cv::Point2f(3*(mask.cols/4), 3*(mask.rows/4));
         ws->area = cv::countNonZero(mask);
     }
 
@@ -561,7 +566,7 @@ namespace lw{
             cv::bitwise_and(mask, ws->bounds, res);
             cv::bitwise_xor(res, ws->bounds, res);
             cv::Mat resized;
-            cv::resize(res, resized, cv::Size(), .15, .15);
+            cv::resize(res, resized, cv::Size(), WINDOW_SCALE, WINDOW_SCALE);
             cv::imshow("XOR", resized);
             while(true)
                 if(cv::waitKey(30) == 27)
@@ -574,5 +579,73 @@ namespace lw{
             }
         }
         return true;
+    }
+
+    void getInstrMaterials(const Instruction * instr, Piece * p1, Piece * p2)
+    {
+        int numpieces;
+        if(instr->op == PLC)
+            numpieces = 2;
+        else
+            numpieces = 1;
+
+        for(int i = 0; i < numpieces; i++)
+        {
+            const char * r = (numpieces==1 || i==1) ? instr->r2 : instr->r1;
+            Piece * p = (i==1) ? p2 : p1;
+            cout<<r<<endl;
+            switch(r[0])
+            {
+                case 'R':
+                    p->c = red; break;
+                case 'Y':
+                    p->c = yellow; break;
+                case 'G':
+                    p->c = green; break;
+                case 'B':
+                    p->c = blue; break;
+                case 'W':
+                    p->c = white; break;
+
+            }
+            switch(r[1])
+            {
+                case 'R':
+                    p->s = rect; break;
+                case 'S':
+                    p->s = square; break;
+            }
+        }
+    }
+
+    void drawWorkspace(cv::Mat frame, Workspace * ws)
+    {
+        cv::rectangle(frame, ws->nw, ws->se, Green, 3);
+    }
+
+    Instruction * getInstrStep(project_t projectName, int step)
+    {
+        if(projectName == stripedcube)
+            return &(stripedcube_ref.instr[step]);
+        else if(projectName == staircase)
+            return &(staircase_ref.instr[step]);
+        else
+            return &(tower_ref.instr[step]);
+    }
+
+    void drawNextInstr(cv::Mat frame, Workspace * ws, const Instruction * instr)
+    {
+        if(!instr)
+            cout<<"No instruction given"<<endl;
+        else
+        {
+            Piece p1, p2; getInstrMaterials(instr, &p1, &p2);
+            // ~~~~~ DEBUG ~~~~~
+            cout<<"P1: " << colorToStr(p1.c)<<" "<<shapeToStr(p1.s)<<endl;
+            if(p2.c)
+                cout<<"P2: " << colorToStr(p2.c)<<" "<<shapeToStr(p2.s)<<endl;
+            // ~~~ END DEBUG ~~~
+            //drawTarget()
+        }
     }
 }

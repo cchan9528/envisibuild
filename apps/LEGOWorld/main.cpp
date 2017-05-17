@@ -74,32 +74,54 @@ int main(int argc, char** argv)
             // // Process
             // lw::projectPossible(projectName,frame,colortabs,NUM_COLORS);
             // lw::materialsReport(colortabs, NUM_COLORS);
-            //
-            // // DEBUG
-            // cv::Mat resized;
-            // cv::resize(frame, resized, cv::Size(), .15, .15);
-            // cv::imshow("original", resized);
-            // // END DEBUG
 
             lw::Workspace ws;
             lw::buildWorkspace(frame, &ws);
+            lw::drawWorkspace(frame, &ws);
+
+            int numsteps;
+            if(projectName == stripedcube)
+                numsteps = NUMSTEPS_STRIPEDCUBE;
+            else if(projectName == staircase)
+                numsteps = NUMSTEPS_STAIRCASE;
+            else
+                numsteps = NUMSTEPS_TOWER;
+            for(int i=0; i < numsteps; i++)
+            {
+                cout<<"Step "<<i+1<<": "<<endl;
+                lw::Instruction * nextInstr = lw::getInstrStep(projectName, i);
+                lw::drawNextInstr(frame, &ws, nextInstr);
+                cout<<endl<<endl<<endl;
+            }
+            // ~~~~~ DEBUG ~~~~~
+            cv::Mat resized;
+            cv::resize(frame, resized, cv::Size(), .5, .5);
+            cv::imshow("original", resized);
+            // ~~~ END DEBUG ~~~
             while(!lw::clearWorkspace(frame,&ws)){};
-            
+
         }
         else
         {
             // Establish Frame Source
             cv::VideoCapture video(framesource);
 
-            // Process Frames
+            // Configure Workspace
+            cv::Mat frame; video >> frame;
+            lw::Workspace ws; lw::buildWorkspace(frame, &ws);
+
+            // Begin Building
             while(video.isOpened())
             {
-                cv::Mat frame; video >> frame;
-                cv::imshow("Recorded Video", frame);
-                cout<<"Project: "<<argv[2]<<endl;
-                // if(lw::projectPossible(projectName,frame,colortabs,NUM_COLORS))
-                lw::projectPossible(projectName,frame,colortabs,NUM_COLORS);
-                lw::materialsReport(colortabs, NUM_COLORS);
+                video >> frame;
+                // lw::projectPossible(projectName,frame,colortabs,NUM_COLORS);
+                // lw::materialsReport(colortabs, NUM_COLORS);
+
+                 // Need Clear Workspace
+                if(!lw::clearWorkspace(frame,&ws))
+                    continue;
+
+
 
                 if(cv::waitKey(30) >= 0)
                     break;

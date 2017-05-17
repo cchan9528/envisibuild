@@ -13,6 +13,10 @@
 #define VIDEO 2
 #define NUM_COLORS 5
 
+#define NUMSTEPS_STRIPEDCUBE 5
+#define NUMSTEPS_STAIRCASE 3
+#define NUMSTEPS_TOWER 3
+
 /******************************************************
  *
  * Type Declarations
@@ -42,6 +46,7 @@ namespace lw {
     } Colortab;
 
     typedef struct Piece{
+        color_t c;
         shape_t s;
         cv::Point center, north;
     } Piece;
@@ -65,7 +70,7 @@ namespace lw {
     } Project;
 
     typedef struct Workspace{
-        cv::Point center, north;
+        cv::Point cc, nw, se;
         cv::Mat bounds;
         int area;
     } Workspace;
@@ -78,6 +83,7 @@ namespace lw {
 
     /* Construction */
     project_t strToProject(std::string s);
+    Instruction * getInstrStep(project_t projectName, int step);
     void countPieces(cv::Mat frameInHSV, Colortab* tab);
     void countPieces(cv::Mat frameInHSV, Colortab* tabs, int tabsSize);
     void materialsReport(lw::Colortab * tabs, int tabsSize);
@@ -86,6 +92,8 @@ namespace lw {
 
     /* Workspace */
     void buildWorkspace(cv::Mat frame, Workspace * ws);
+    void drawWorkspace(cv::Mat frame, Workspace * ws);
+    void drawNextInstr(cv::Mat frame, Workspace * ws,const Instruction * instr);
     bool clearWorkspace(cv::Mat frame, Workspace * ws);
 }
 #endif

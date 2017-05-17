@@ -29,6 +29,7 @@ int main(int argc, char** argv)
         cout << "HSVFinder Terminated on Read Image Error." << endl;
         return -1;
     }
+
     cv::Mat frameInHSV;
     cv::cvtColor(frame, frameInHSV, cv::COLOR_BGR2HSV);
 
