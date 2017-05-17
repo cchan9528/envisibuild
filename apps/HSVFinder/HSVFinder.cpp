@@ -57,25 +57,32 @@ int main(int argc, char** argv)
         return -1;
     }
     cv::Mat resized;
-    cv::resize(frame, resized, cv::Size(), .15, .15);
+    cv::resize(frame, resized, cv::Size(), .5, .5);
     cv::imshow("Original Image", resized);
+
+    // Convert Frame to HSV
+    cv::Mat frameInHSV;
+    cvtColor(frame, frameInHSV, cv::COLOR_BGR2HSV);
 
     // HSV Finder
     cout<<"Processing...\n\n"<<endl;
     while(true)
     {
-        // Convert Frame to HSV
-        cv::Mat frameInHSV;
-        cvtColor(frame, frameInHSV, cv::COLOR_BGR2HSV);
-
         // Threshold Frame According to What User Adjusts HSV Intervals to
         cv::Mat mask;
         cv::Scalar lowerBound(lowH, lowS, lowV), upperBound(highH, highS, highV);
         cv::inRange(frameInHSV, lowerBound, upperBound, mask);
 
         // Display the (Threshold) Mask
-        cv::resize(mask, resized, cv::Size(), .15, .15);
-        cv::imshow("Thresholded Mask", resized);
+        cv::resize(mask, resized, cv::Size(), .5, .5);
+        cv::imshow("Mask", resized);
+
+        // Equalize Histogram
+        cv::Mat eqMask;
+        equalizeHist( mask, eqMask );
+        cv::resize(eqMask, resized, cv::Size(), .5, .5);
+        cv::imshow("Equalized Mask", resized);
+
         if(cv::waitKey(30) == 27)
         {
             cout<<"\n\n\nUser held esc key to terminate program"<<endl;

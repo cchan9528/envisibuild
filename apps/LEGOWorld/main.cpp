@@ -23,12 +23,12 @@ int main(int argc, char** argv)
 
         // Establish Frame Source
         cv::VideoCapture camera;
-        camera.open(1);
-        for(int i = 2; !camera.isOpened(); i++ )
-        {
-            if(i==11){cout<<"\nFailed to connect camera!\n"<<endl; return 1;}
-            camera.open(i++);   // Auto-releases Before Opening Next
-        }
+        camera.open(0);
+        // for(int i = 0; !camera.isOpened(); i++ )
+        // {
+        //     if(i==1000){cout<<"\nFailed to connect camera!\n"<<endl; return 1;}
+        //     camera.open(i);   // Auto-releases Before Opening Next
+        // }
 
         // Process Frames
         while(1)
@@ -42,7 +42,7 @@ int main(int argc, char** argv)
     }
     else if(argc == 3)
     {
-        char * framesource = argv[1];
+        // Determine Desired Project
         project_t projectName = lw::strToProject(argv[2]);
         if(projectName==none)
         {
@@ -59,21 +59,52 @@ int main(int argc, char** argv)
             {.c = white,  .sCount = 0, .rCount = 0}
         };
 
-        // Load Frame from Source
-        cv::Mat frame = cv::imread(framesource, CV_LOAD_IMAGE_COLOR);
-        if(!frame.data)
+        char * framesource = argv[1];
+
+        if(fileType(framesource)==IMAGE)
         {
-            cout<<"\nRead Frame Error.\nLEGOFinder Terminated\n"<<endl;
-            return -1;
+            // Load Frame
+            cv::Mat frame = cv::imread(framesource, CV_LOAD_IMAGE_COLOR);
+            if(!frame.data)
+            {
+                cout<<"\nRead Frame Error.\nLEGOFinder Terminated\n"<<endl;
+                return -1;
+            }
+            //
+            // // Process
+            // lw::projectPossible(projectName,frame,colortabs,NUM_COLORS);
+            // lw::materialsReport(colortabs, NUM_COLORS);
+            //
+            // // DEBUG
+            // cv::Mat resized;
+            // cv::resize(frame, resized, cv::Size(), .15, .15);
+            // cv::imshow("original", resized);
+            // // END DEBUG
+
+            lw::Workspace ws;
+            lw::buildWorkspace(frame, &ws);
+            while(!lw::clearWorkspace(frame,&ws)){};
+            
         }
+        else
+        {
+            // Establish Frame Source
+            cv::VideoCapture video(framesource);
 
-        if(lw::projectPossible(projectName,frame,colortabs,NUM_COLORS))
-            lw::materialsReport(colortabs, NUM_COLORS);
+            // Process Frames
+            while(video.isOpened())
+            {
+                cv::Mat frame; video >> frame;
+                cv::imshow("Recorded Video", frame);
+                cout<<"Project: "<<argv[2]<<endl;
+                // if(lw::projectPossible(projectName,frame,colortabs,NUM_COLORS))
+                lw::projectPossible(projectName,frame,colortabs,NUM_COLORS);
+                lw::materialsReport(colortabs, NUM_COLORS);
 
-        // DEBUG
-        cv::Mat resized;
-        cv::resize(frame, resized, cv::Size(), .15, .15);
-        cv::imshow("original", resized);
-        // END DEBUG
+                if(cv::waitKey(30) >= 0)
+                    break;
+            }
+            return 0;
+        }
     }
 }

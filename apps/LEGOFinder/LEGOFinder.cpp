@@ -4,11 +4,11 @@
 #include <opencv2/imgproc.hpp>
 #include "legohsvcolors.hpp"
 
-#define LEGO_S_AREA_LB 20000        // Inherent Scale Variance
+#define LEGO_S_AREA_LB 10000        // Inherent Scale Variance
 #define LEGO_S_AREA_UB 500000
 #define LEGO_R_AREA_LB 500001
 #define LEGO_R_AREA_UB 1000000
-#define LEGO_DENSITY_THRESHOLD 0.40
+#define LEGO_DENSITY_THRESHOLD 0.45
 
 using namespace std;
 
@@ -94,21 +94,28 @@ int main(int argc, char** argv)
             double area = contourArea(contours[j]);
             double density = numWhites/area;
 
+            // LEGO Decision
+            if( (!(LEGO_S_AREA_LB <= area && area <= LEGO_S_AREA_UB) &&
+                !(LEGO_R_AREA_LB <= area && area <= LEGO_R_AREA_UB)) ||
+                density < LEGO_DENSITY_THRESHOLD )
+                continue;
+
+            // ~~~~~ DEBUG ~~~~~
+            cout<<area<<" "<<density<<" "<<i<<endl;
+            // ~~~ END DEBUG ~~~
+
             // Find Verticies of Polygonal Approximation of Contour
             vector<cv::Point> verts;
             double deviation = .02 * cv::arcLength(contours[j], true);
             cv::approxPolyDP(contours[j], verts, deviation, true);
 
-            // LEGO Decision
-            if( !(LEGO_S_AREA_LB <= area && area <= LEGO_S_AREA_UB) ||
-                !(LEGO_R_AREA_LB <= area && area <= LEGO_R_AREA_UB) ||
-                density < LEGO_DENSITY_THRESHOLD )
-                continue;
-
             // Draw Rotated Rect
             cv::Point2f points[4]; rr.points( points );
             for( int k = 0; k < 4; k++ )
+            {
                 line( imageInBGR, points[k], points[(k+1)%4], bbcolor, 10);
+                line( frame, points[k], points[(k+1)%4], bbcolor, 10);
+            }
 
             // Draw Centers of Bounding Boxes Them
             double radius = 25;
@@ -119,13 +126,14 @@ int main(int argc, char** argv)
             for(int l = 0; l < verts.size(); l++)
             {
                 cv::circle(imageInBGR, verts[l], radius, bbcolor, 10);
+                cv::circle(frame, verts[l], radius, bbcolor, 10);
                 cout<<verts[l].x<<", "<<verts[l].y<<endl;
             }cout<<endl;
         }
 
         // ~~~~~ DEBUG ~~~~~
         cv::Mat resized;
-        cv::resize(imageInBGR, resized, cv::Size(), .15, .15);
+        cv::resize(imageInBGR, resized, cv::Size(), .5, .5);
         cv::imshow(windowName[i] + "(blurred)", resized);
         // ~~~ END DEBUG ~~~
 
@@ -135,8 +143,10 @@ int main(int argc, char** argv)
 
     // Show Cumulative Mask
     cv::Mat resized;
-    cv::resize(cumMask, resized, cv::Size(), .15, .15);
+    cv::resize(cumMask, resized, cv::Size(), .5, .5);
     cv::imshow("Cumulative Mask", resized);
+    cv::resize(frame, resized, cv::Size(), .5, .5);
+    cv::imshow("Annotated Image", resized);
 
     // For Observation
     while(true)

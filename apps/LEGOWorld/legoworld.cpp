@@ -4,12 +4,16 @@
 #include <opencv2/imgproc.hpp>
 #include <iostream>
 
-#define IMAGE 1
-#define VIDEO 2
+using namespace std;
+/******************************************************************
+ *
+ * Descriptors
+ *
+ *******************************************************************/
 #define RED_H_LO 0
-#define RED_S_LO 138
-#define RED_V_LO 0
-#define RED_H_HI 12
+#define RED_S_LO 160
+#define RED_V_LO 135
+#define RED_H_HI 10
 #define RED_S_HI 255
 #define RED_V_HI 255
 #define BLUE_H_LO 70
@@ -20,15 +24,15 @@
 #define BLUE_V_HI 255
 #define GREEN_H_LO 30
 #define GREEN_S_LO 100
-#define GREEN_V_LO 70
+#define GREEN_V_LO 80
 #define GREEN_H_HI 70
 #define GREEN_S_HI 255
 #define GREEN_V_HI 255
-#define WHITE_H_LO 0
-#define WHITE_S_LO 0
-#define WHITE_V_LO 210
+#define WHITE_H_LO 10
+#define WHITE_S_LO 100
+#define WHITE_V_LO 190
 #define WHITE_H_HI 180
-#define WHITE_S_HI 120
+#define WHITE_S_HI 170
 #define WHITE_V_HI 255
 #define YELLOW_H_LO 15
 #define YELLOW_S_LO 200
@@ -36,7 +40,15 @@
 #define YELLOW_H_HI 45
 #define YELLOW_S_HI 255
 #define YELLOW_V_HI 255
+#define SQ_SIDES_RATIO_LB 0.85
+#define SQ_SIDES_RATIO_UB 1.15
+#define LEGO_S_AREA_LB 10000        // Inherent Scale Variance
+#define LEGO_S_AREA_UB 40000
+#define LEGO_R_AREA_LB 40001
+#define LEGO_R_AREA_UB 100000
+#define LEGO_DENSITY_THRESHOLD 0.45
 
+#define WINDOW_SCALE .5
 /******************************************************
  *
  * Project Instructions
@@ -78,7 +90,7 @@ lw::Instruction tower_instr[3] = {
     { .op = STK, .r1 = "CC", .r2 = "GS", .r3 = "CC"}
 };
 lw::Project tower_ref = {
-    .materials[green] = {.c = green, .sCount=0, .rCount=0},
+    .materials[green] = {.c = green, .sCount=3, .rCount=0},
     .numInstr = 3,
     .instr = tower_instr,
 };
@@ -101,7 +113,7 @@ cv::Scalar yellowUB(YELLOW_H_HI, YELLOW_S_HI, YELLOW_V_HI);
 cv::Scalar whiteLB(WHITE_H_LO, WHITE_S_LO, WHITE_V_LO);
 cv::Scalar whiteUB(WHITE_H_HI, WHITE_S_HI, WHITE_V_HI);
 
-int findFiletype(char * s)
+int fileType(char * s)
 {
     int i = 0;
     while(1) {i++; if(s[i]==0){break;}}
@@ -111,14 +123,18 @@ int findFiletype(char * s)
     }
     else
     {
-        switch(s[i-4])
+        switch(s[i-3])
         {
             case 'j':
+            case 'J':
+            case 'P':
             case 'p':
                 return IMAGE;
             case 'm':
+            case 'M':
                 return VIDEO;
             default:
+                cout<<"\n\nCouldn't Resolve FileType "<<s[i-4]<<"\n\n"<<endl;
                 return -1;
         }
     }
@@ -131,7 +147,6 @@ int findFiletype(char * s)
  ******************************************************/
 
 namespace lw{
-    using namespace std;
 
     string colorToStr(int c)
     {
@@ -216,6 +231,13 @@ namespace lw{
            // Decide Shape
            float wToh = ((float)rr.size.width)/((float)rr.size.height);
            float hTow = 1/wToh;
+
+           // ~~~~~ DEBUG ~~~~~
+           cout<<"wToh: "<<wToh<<endl;
+           cout<<"hToW: "<<hTow<<endl;
+           cout<<"area: "<<area<<endl;
+           // ~~~ END DEBUG ~~~
+
            if( (LEGO_S_AREA_LB <= area && area <= LEGO_S_AREA_UB) &&
                (SQ_SIDES_RATIO_LB <= wToh && wToh <= SQ_SIDES_RATIO_UB) &&
                (SQ_SIDES_RATIO_LB <= hTow && hTow <= SQ_SIDES_RATIO_UB))
@@ -239,6 +261,42 @@ namespace lw{
     // ~~~ END DEBUG ~~~
     }
 
+    bool enoughMaterials(Colortab * colortab, const Colortab * projBlocks)
+    {
+        // Cannot Obtain Accurate Count; Assume Possible
+        if((*colortab).uCount != 0)
+        {
+            cout<<"********************************************* "\
+                << "\n\n\tProject may be possible\n"\
+                << "  Will evaluate again once pieces in frame"\
+                << "\n\n       Materials Report UNFINISHED \n\n" \
+                <<"********************************************* "\
+                <<endl;
+            return true;
+        }
+
+        // Check Enough Squares Present
+        if((*colortab).sCount != (*projBlocks).sCount)
+        {
+            cout<<"***************************************\n"<<endl;
+            cout<<"\tNeed more "<<colorToStr((*colortab).c)<<" squares"<< endl;
+            cout<<"\n***************************************"<<endl;
+            return false;
+        }
+        // Check Enough Rectangles Present
+        else if((*colortab).rCount != (*projBlocks).rCount)
+        {
+            cout<<"***************************************\n"<<endl;
+            cout<<"\tNeed more "<<colorToStr((*colortab).c)<<" rects"<< endl;
+            cout<<"\n***************************************"<<endl;
+            return false;
+        }
+
+        // ~~~~~ DEBUG ~~~~~
+        return true;
+        // ~~~ END DEBUG ~~~
+    }
+
     void countPieces(cv::Mat frame, lw::Colortab* tabs, int tabsSize)
     {
         projectPossible(none, frame, tabs, tabsSize);
@@ -248,6 +306,8 @@ namespace lw{
     {
         cv::Mat frameInHSV;
         cv::cvtColor(frame, frameInHSV, cv::COLOR_BGR2HSV);
+
+        (*tab).sCount = (*tab).rCount = (*tab).uCount = 0;
 
         cv::Mat mask;
         cv::Scalar lb, ub;
@@ -317,17 +377,17 @@ namespace lw{
             shape_t s = findShape(rr, numVerts, area, mask.cols, mask.rows);
             if(s == square)
             {
-                cout<<"Square"<<endl;
+                // cout<<"Square"<<endl;
                 (*tab).sCount++;
             }
             else if(s == rect)
             {
-                cout<<"Rect"<<endl;
+                // cout<<"Rect"<<endl;
                 (*tab).rCount++;
             }
             else
             {
-                cout<<"Unkwn"<<endl;
+                // cout<<"Unkwn"<<endl;
                 (*tab).uCount++;
             }
 
@@ -338,7 +398,7 @@ namespace lw{
             cv::Point2f points[4]; rr.points( points );
             for( int k = 0; k < 4; k++ )
                 line( maskInBGR, points[k], points[(k+1)%4], green, thickness);
-            cout<<"Vertex Coordinates for Contour "<< i <<endl;
+            // cout<<"Vertex Coordinates for Contour "<< i <<endl;
             for(int l = 0; l < verts.size(); l++)
             {
                 cv::circle(maskInBGR, verts[l], radius, green, thickness);
@@ -350,7 +410,7 @@ namespace lw{
         if(contours.size()!=0)
         {
             cv::Mat resized;
-            cv::resize(maskInBGR, resized, cv::Size(), .15, .15);
+            cv::resize(maskInBGR, resized,cv::Size(),WINDOW_SCALE,WINDOW_SCALE);
             cv::imshow(color + "(blurred)", resized);
             while(true)
                 if(cv::waitKey(30) == 27)
@@ -436,7 +496,7 @@ namespace lw{
         const Colortab * projBlocks = (*projectRef).materials;
         for(int color = red; color < numcolors; color++)
         {
-            int numNeeded = projBlocks[color].sCount + projBlocks[color].rCount;
+            char numNeeded = projBlocks[color].sCount + projBlocks[color].rCount;
 
             // Nothing is Needed of This Color
             if( numNeeded == 0 )
@@ -452,35 +512,65 @@ namespace lw{
             {
                 // Update Color Tabs
                 countPieces(frame, (colortabs+color));
-
-                // Cannot Obtain Accurate Count; Assume Possible
-                if(colortabs[color].uCount != 0)
-                {
-                    cout<<"********************************************* "\
-                        << "\n\n\tProject may be possible\n"\
-                        << "  Will evaluate again once pieces in frame"\
-                        << "\n\n       Materials Report UNFINISHED \n\n" \
-                        <<"********************************************* "\
-                        <<endl;
+                if(enoughMaterials((colortabs+color), (projBlocks+color)))
                     continue;
-                }
+                else
+                    return false;
+            }
+        }
+        return true;
+    }
 
-                // Check Enough Squares Present
-                if(colortabs[color].sCount != projBlocks[color].sCount)
-                {
-                    cout<<"***************************************\n"<<endl;
-                    cout<<"\tNeed more "<<colorToStr(color)<<" squares"<< endl;
-                    cout<<"\n***************************************"<<endl;
-                    return false;
-                }
-                // Check Enough Rectangles Present
-                else if(colortabs[color].rCount != projBlocks[color].rCount)
-                {
-                    cout<<"***************************************\n"<<endl;
-                    cout<<"\tNeed more "<<colorToStr(color)<<" rects"<< endl;
-                    cout<<"\n***************************************"<<endl;
-                    return false;
-                }
+    void buildWorkspace(cv::Mat frame, Workspace * ws)
+    {
+        cv::Mat mask(frame.rows, frame.cols, CV_8UC1, cv::Scalar(0));
+        mask(cv::Rect(mask.cols/4, mask.rows/4, mask.cols/2, mask.rows/2))=255;
+        ws->bounds = mask;
+        ws->area = cv::countNonZero(mask);
+    }
+
+    bool clearWorkspace(cv::Mat frame, Workspace * ws)
+    {
+        cv::Mat frameInHSV, mask, res;
+        cv::cvtColor(frame, frameInHSV, cv::COLOR_BGR2HSV);
+        cv::Scalar lb, ub;
+
+        for(int c = red; c < NUM_COLORS; c++)
+        {
+            switch(c)
+            {
+                case green:
+                    lb = greenLB; ub = greenUB; break;
+                case blue:
+                    lb = blueLB; ub = blueUB; break;
+                case red:
+                    lb = redLB; ub = redUB; break;
+                case yellow:
+                    lb = yellowLB; ub = yellowUB; break;
+                case white:
+                    lb = whiteLB; ub = whiteUB; break;
+            }
+            string color = colorToStr(c);
+            cv::inRange(frameInHSV, lb, ub, mask);
+
+            // Filter Noise
+            cv::blur(mask, mask, cv::Size(5,5));
+            cv::erode(mask, mask, getStructuringElement(cv::MORPH_RECT,
+                                                        cv::Size(3,3)));
+
+            cv::bitwise_and(mask, ws->bounds, res);
+            cv::bitwise_xor(res, ws->bounds, res);
+            cv::Mat resized;
+            cv::resize(res, resized, cv::Size(), .15, .15);
+            cv::imshow("XOR", resized);
+            while(true)
+                if(cv::waitKey(30) == 27)
+                {    cout<<"ESC pressed"<<endl<<endl; break;}
+            if(cv::countNonZero(res) != ws->area)
+            {
+                cout<<endl<<endl<<"On "<<colorToStr(c)<<endl;
+                cout<<"Please clear workspace!"<<endl<<endl;
+                return false;
             }
         }
         return true;
