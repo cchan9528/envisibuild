@@ -76,7 +76,7 @@ int main(int argc, char** argv)
             // lw::materialsReport(colortabs, NUM_COLORS);
 
             lw::Workspace ws;
-            lw::buildWorkspace(frame, &ws);
+            lw::buildWorkspace(frame, &ws, projectName);
             lw::drawWorkspace(frame, &ws);
 
             int numsteps;
@@ -86,20 +86,34 @@ int main(int argc, char** argv)
                 numsteps = NUMSTEPS_STAIRCASE;
             else
                 numsteps = NUMSTEPS_TOWER;
-            for(int i=0; i < numsteps; i++)
-            {
-                cout<<"Step "<<i+1<<": "<<endl;
-                lw::Instruction * nextInstr = lw::getInstrStep(projectName, i);
-                lw::drawNextInstr(frame, &ws, nextInstr);
-                cout<<endl<<endl<<endl;
-            }
-            // ~~~~~ DEBUG ~~~~~
-            cv::Mat resized;
-            cv::resize(frame, resized, cv::Size(), .5, .5);
-            cv::imshow("original", resized);
-            // ~~~ END DEBUG ~~~
-            while(!lw::clearWorkspace(frame,&ws)){};
 
+            lw::Instruction * curInstr;
+            // for(int i=0; i < numsteps;)
+            // ~~~~~ DEBUG ~~~~~
+            for(int i=-1; i < numsteps;)
+            // ~~~ END DEBUG ~~~
+            {
+                cv::Mat tempFrame = frame.clone();
+                lw::drawWorkspace(tempFrame, &ws);
+                if(lw::instrDone(tempFrame, &ws, curInstr))
+                    i++;
+                // while(!lw::clearWorkspace(frame,&ws)){};
+
+                cout<<"Step "<<i+1<<": "<<endl;
+                curInstr = lw::getInstrStep(projectName, i+1);
+                lw::drawInstr(tempFrame, &ws, curInstr);
+                cout<<endl<<endl<<endl;
+
+                // ~~~~~ DEBUG ~~~~~
+                cv::Mat resized;
+                cv::resize(tempFrame, resized, cv::Size(), .5, .5);
+                cv::imshow("original", resized);
+                while(true)
+                    if(cv::waitKey(30) == 27)
+                    {    cout<<"ESC pressed"<<endl<<endl; break;}
+                i++;
+                // ~~~ END DEBUG ~~~
+            }
         }
         else
         {
@@ -108,25 +122,44 @@ int main(int argc, char** argv)
 
             // Configure Workspace
             cv::Mat frame; video >> frame;
-            lw::Workspace ws; lw::buildWorkspace(frame, &ws);
+            lw::Workspace ws;
+            lw::buildWorkspace(frame, &ws, projectName);
 
-            // Begin Building
-            while(video.isOpened())
+            int numsteps;
+            if(projectName == stripedcube)
+                numsteps = NUMSTEPS_STRIPEDCUBE;
+            else if(projectName == staircase)
+                numsteps = NUMSTEPS_STAIRCASE;
+            else
+                numsteps = NUMSTEPS_TOWER;
+
+            lw::Instruction * curInstr;
+            // for(int i=0; i < numsteps;)
+            // ~~~~~ DEBUG ~~~~~
+            for(int i=-1; i < numsteps && video.isOpened();)
+            // ~~~ END DEBUG ~~~
             {
                 video >> frame;
-                // lw::projectPossible(projectName,frame,colortabs,NUM_COLORS);
-                // lw::materialsReport(colortabs, NUM_COLORS);
+                lw::drawWorkspace(frame, &ws);
+                if(lw::instrDone(frame, &ws, curInstr))
+                    i++;
+                // while(!lw::clearWorkspace(frame,&ws)){};
 
-                 // Need Clear Workspace
-                if(!lw::clearWorkspace(frame,&ws))
-                    continue;
+                cout<<"Step "<<i+1<<": "<<endl;
+                curInstr = lw::getInstrStep(projectName, i+1);
+                lw::drawInstr(frame, &ws, curInstr);
+                cout<<endl<<endl<<endl;
 
-
-
-                if(cv::waitKey(30) >= 0)
-                    break;
+                // ~~~~~ DEBUG ~~~~~
+                cv::Mat resized;
+                cv::resize(frame, resized, cv::Size(), .5, .5);
+                cv::imshow("original", resized);
+                // while(true)
+                    if(cv::waitKey(1) == 27)
+                    {    cout<<"ESC pressed"<<endl<<endl; break;}
+                // ~~~ END DEBUG ~~~
             }
-            return 0;
         }
+        return 0;
     }
 }

@@ -42,11 +42,13 @@ using namespace std;
 #define YELLOW_V_HI 255
 #define SQ_SIDES_RATIO_LB 0.85
 #define SQ_SIDES_RATIO_UB 1.15
-#define LEGO_S_AREA_LB 10000        // Inherent Scale Variance
-#define LEGO_S_AREA_UB 40000
-#define LEGO_R_AREA_LB 40001
-#define LEGO_R_AREA_UB 100000
-#define LEGO_DENSITY_THRESHOLD 0.45
+#define S_AREA_LB 10000        // Inherent Scale Variance
+#define S_AREA_UB 40000
+#define R_AREA_LB 40001
+#define R_AREA_UB 100000
+#define SHORT 150
+#define LONG 300
+#define DENSITY_THRESHOLD 0.45
 
 #define WINDOW_SCALE .5
 /******************************************************
@@ -56,38 +58,40 @@ using namespace std;
  ******************************************************/
 
 // Striped Cube
-lw::Instruction stripedcube_instr[5] = {
-    { .op = PLC, .r1 = "BR", .r2 = "BR", .r3 = "LL"},
-    { .op = STK, .r1 = "NW", .r2 = "WR", .r3 = "NN"},
-    { .op = STK, .r1 = "SW", .r2 = "WR", .r3 = "NN"},
-    { .op = STK, .r1 = "NE", .r2 = "RR", .r3 = "NN"},
-    { .op = STK, .r1 = "SE", .r2 = "RR", .r3 = "NN"}
+lw::Instruction stripedcube_instr[6] = {
+    { .op = PLC, .r1 = "BR", .r2 = "", .r3 = ""},
+    { .op = PLC, .r1 = "BR", .r2 = "EE", .r3 = "WW"},
+    { .op = STK, .r1 = "WR", .r2 = "NE", .r3 = "SE"},
+    { .op = STK, .r1 = "WR", .r2 = "NW", .r3 = "NE"},
+    { .op = STK, .r1 = "RR", .r2 = "NE", .r3 = "SW"},
+    { .op = STK, .r1 = "RR", .r2 = "NE", .r3 = "NW"}
 };
 const lw::Project stripedcube_ref = {
     .materials[red]   = {.c = red  , .sCount=0, .rCount=2},
     .materials[white] = {.c = white, .sCount=0, .rCount=2},
     .materials[blue]  = {.c = blue , .sCount=0, .rCount=2},
-    .numInstr = 5,
+    .numInstr = 6,
     .instr = stripedcube_instr,
 };
 
 // Staircase
-lw::Instruction staircase_instr[3] = {
-    { .op = PLC, .r1 = "RR", .r2 = "RS", .r3 = "SS"},
-    { .op = STK, .r1 = "NN", .r2 = "RR", .r3 = "NN"},
-    { .op = STK, .r1 = "NN", .r2 = "RS", .r3 = "CC"}
+lw::Instruction staircase_instr[4] = {
+    { .op = PLC, .r1 = "RR", .r2 = "", .r3 = ""},
+    { .op = PLC, .r1 = "RS", .r2 = "NN", .r3 = "EE"},
+    { .op = STK, .r1 = "RR", .r2 = "NW", .r3 = "NE"},
+    { .op = STK, .r1 = "RS", .r2 = "NW", .r3 = "SW"}
 };
 const lw::Project staircase_ref = {
     .materials[red] = {.c = red, .sCount=2, .rCount=2},
-    .numInstr = 3,
+    .numInstr = 4,
     .instr = staircase_instr,
 };
 
 // Tower
 lw::Instruction tower_instr[3] = {
     { .op = PLC, .r1 = "GS", .r2 = "", .r3 = ""},
-    { .op = STK, .r1 = "CC", .r2 = "GS", .r3 = "CC"},
-    { .op = STK, .r1 = "CC", .r2 = "GS", .r3 = "CC"}
+    { .op = STK, .r1 = "GS", .r2 = "NW", .r3 = "NW"},
+    { .op = STK, .r1 = "GS", .r2 = "NW", .r3 = "NW"}
 };
 const lw::Project tower_ref = {
     .materials[green] = {.c = green, .sCount=3, .rCount=0},
@@ -112,8 +116,6 @@ cv::Scalar yellowLB(YELLOW_H_LO, YELLOW_S_LO, YELLOW_V_LO);
 cv::Scalar yellowUB(YELLOW_H_HI, YELLOW_S_HI, YELLOW_V_HI);
 cv::Scalar whiteLB(WHITE_H_LO, WHITE_S_LO, WHITE_V_LO);
 cv::Scalar whiteUB(WHITE_H_HI, WHITE_S_HI, WHITE_V_HI);
-
-cv::Scalar Green(0,255,0);
 
 int fileType(char * s)
 {
@@ -150,52 +152,49 @@ int fileType(char * s)
 
 namespace lw{
 
+    cv::Scalar drawColor(color_t color)
+    {
+        switch(color)
+        {
+            case red: return cv::Scalar(0,0,255);
+            case yellow: return cv::Scalar(255,255,0);
+            case green: return cv::Scalar(0,255,0);
+            case blue: return cv::Scalar(255,0,0);
+            case white: return cv::Scalar(255,255,255);
+        }
+    }
+
     string colorToStr(int c)
     {
         switch(c)
         {
-            case red:
-                return "red";
-            case yellow:
-                return "yellow";
-            case green:
-                return "green";
-            case blue:
-                return "blue";
-            case white:
-                return "white";
-            default:
-                return "";
+            case red: return "red";
+            case yellow: return "yellow";
+            case green: return "green";
+            case blue: return "blue";
+            case white: return "white";
+            default: return "";
         }
     }
     string colorToStr(color_t c)
     {
         switch(c)
         {
-            case red:
-                return "red";
-            case yellow:
-                return "yellow";
-            case green:
-                return "green";
-            case blue:
-                return "blue";
-            case white:
-                return "white";
-            default:
-                return "";
+            case red: return "red";
+            case yellow: return "yellow";
+            case green: return "green";
+            case blue: return "blue";
+            case white: return "white";
+            default: return "";
         }
     }
     string shapeToStr(shape_t s)
     {
         switch(s)
         {
-            case square:
-                return "square";
-            case rect:
-                return "rectangle";
-            default:
-                return "";
+            case square: return "square";
+            case rect: return "rectangle";
+            default: return "";
         }
     }
     project_t strToProject(string s)
@@ -240,11 +239,11 @@ namespace lw{
            cout<<"area: "<<area<<endl;
            // ~~~ END DEBUG ~~~
 
-           if( (LEGO_S_AREA_LB <= area && area <= LEGO_S_AREA_UB) &&
+           if( (S_AREA_LB <= area && area <= S_AREA_UB) &&
                (SQ_SIDES_RATIO_LB <= wToh && wToh <= SQ_SIDES_RATIO_UB) &&
                (SQ_SIDES_RATIO_LB <= hTow && hTow <= SQ_SIDES_RATIO_UB))
                return square;
-           else if( (LEGO_R_AREA_LB <= area && area <= LEGO_R_AREA_UB) )
+           else if( (R_AREA_LB <= area && area <= R_AREA_UB) )
                return rect;
        }
 
@@ -316,18 +315,11 @@ namespace lw{
         color_t c = (*tab).c;
         switch(c)
         {
-            case green:
-                lb = greenLB; ub = greenUB; break;
-            case blue:
-                lb = blueLB; ub = blueUB; break;
-            case red:
-                lb = redLB; ub = redUB; break;
-            case yellow:
-                lb = yellowLB; ub = yellowUB; break;
-            case white:
-                lb = whiteLB; ub = whiteUB; break;
-            default:
-                return;
+            case green: lb = greenLB; ub = greenUB; break;
+            case blue: lb = blueLB; ub = blueUB; break;
+            case red: lb = redLB; ub = redUB; break;
+            case yellow: lb = yellowLB; ub = yellowUB; break;
+            case white: lb = whiteLB; ub = whiteUB; break;
         }
         string color = colorToStr(c);
         cv::inRange(frameInHSV, lb, ub, mask);
@@ -372,26 +364,17 @@ namespace lw{
             int numVerts = verts.size();
 
             // Ignore Noise
-            if(!(LEGO_S_AREA_LB <= area) || (density < LEGO_DENSITY_THRESHOLD))
+            if(!(S_AREA_LB <= area) || (density < DENSITY_THRESHOLD))
                 continue;
 
             // Update Color Tab
             shape_t s = findShape(rr, numVerts, area, mask.cols, mask.rows);
             if(s == square)
-            {
-                // cout<<"Square"<<endl;
                 (*tab).sCount++;
-            }
             else if(s == rect)
-            {
-                // cout<<"Rect"<<endl;
                 (*tab).rCount++;
-            }
             else
-            {
-                // cout<<"Unkwn"<<endl;
                 (*tab).uCount++;
-            }
 
             // DEBUG
             //cv::Scalar green(0,255,0);
@@ -427,45 +410,21 @@ namespace lw{
         for(int i = 0 ; i < tabsSize; i++)
         {
             Colortab t = *(tabs+i);
-            int numS = t.sCount;
-            int numR = t.rCount;
-            int numU = t.uCount;
+            int numS = t.sCount, numR = t.rCount, numU = t.uCount;
+            string s;
             color_t c  = t.c;
             switch(c)
             {
-                case green:
-                    cout<<"Green Tab: "\
-                        << numS << " squares, "\
-                        << numR << " rectangles, "\
-                        << numU << " unknowns" << endl;
-                    break;
-                case blue:
-                    cout<<"Blue Tab: "\
-                        << numS << " squares, "\
-                        << numR << " rectangles, "\
-                        << numU << " unknowns" << endl;
-                    break;
-                case red:
-                    cout<<"Red Tab: "\
-                        << numS << " squares, "\
-                        << numR << " rectangles, "\
-                        << numU << " unknowns" << endl;
-                    break;
-                case yellow:
-                    cout<<"Yellow Tab: "\
-                        << numS << " squares, "\
-                        << numR << " rectangles, "\
-                        << numU << " unknowns" << endl;
-                    break;
-                case white:
-                    cout<<"White Tab: "\
-                        << numS << " squares, "\
-                        << numR << " rectangles, "\
-                        << numU << " unknowns" << endl;
-                    break;
-                default:
-                    return;
+                case green: s = "Green "; break;
+                case blue: s = "Blue "; break;
+                case red: s = "Red "; break;
+                case yellow: s = "Yellow "; break;
+                case white: s = "White "; break;
             }
+            cout<<s<<"Tab: "\
+                << numS << " squares, "\
+                << numR << " rectangles, "\
+                << numU << " unknowns" << endl;
         }
         cout<<"\n\tReport UNFINISHED if unknown > 0"<<endl;
         cout<<"\t\tWill Reevaluate"<<endl;
@@ -480,12 +439,9 @@ namespace lw{
         const Project * projectRef;
         switch(project)
         {
-            case stripedcube:
-                projectRef = &stripedcube_ref; break;
-            case staircase:
-                projectRef = &staircase_ref; break;
-            case tower:
-                projectRef = &tower_ref; break;
+            case stripedcube: projectRef = &stripedcube_ref; break;
+            case staircase: projectRef = &staircase_ref; break;
+            case tower: projectRef = &tower_ref; break;
             default:
                 cout<<"\n\nProject not available."<<endl;
                 cout<<"Please choose an available project:\n"\
@@ -498,7 +454,7 @@ namespace lw{
         const Colortab * projBlocks = (*projectRef).materials;
         for(int color = red; color < numcolors; color++)
         {
-            char numNeeded = projBlocks[color].sCount + projBlocks[color].rCount;
+            char numNeeded = projBlocks[color].sCount+projBlocks[color].rCount;
 
             // Nothing is Needed of This Color
             if( numNeeded == 0 )
@@ -523,7 +479,7 @@ namespace lw{
         return true;
     }
 
-    void buildWorkspace(cv::Mat frame, Workspace * ws)
+    void buildWorkspace(cv::Mat frame, Workspace * ws, project_t p)
     {
         cv::Mat mask(frame.rows, frame.cols, CV_8UC1, cv::Scalar(0));
         mask(cv::Rect(mask.cols/4, mask.rows/4, mask.cols/2, mask.rows/2))=255;
@@ -532,6 +488,7 @@ namespace lw{
         ws->nw = cv::Point2f(mask.cols/4, mask.rows/4);
         ws->se = cv::Point2f(3*(mask.cols/4), 3*(mask.rows/4));
         ws->area = cv::countNonZero(mask);
+        ws->p = p;
     }
 
     bool clearWorkspace(cv::Mat frame, Workspace * ws)
@@ -544,16 +501,11 @@ namespace lw{
         {
             switch(c)
             {
-                case green:
-                    lb = greenLB; ub = greenUB; break;
-                case blue:
-                    lb = blueLB; ub = blueUB; break;
-                case red:
-                    lb = redLB; ub = redUB; break;
-                case yellow:
-                    lb = yellowLB; ub = yellowUB; break;
-                case white:
-                    lb = whiteLB; ub = whiteUB; break;
+                case green: lb = greenLB; ub = greenUB; break;
+                case blue: lb = blueLB; ub = blueUB; break;
+                case red: lb = redLB; ub = redUB; break;
+                case yellow: lb = yellowLB; ub = yellowUB; break;
+                case white: lb = whiteLB; ub = whiteUB; break;
             }
             string color = colorToStr(c);
             cv::inRange(frameInHSV, lb, ub, mask);
@@ -565,12 +517,15 @@ namespace lw{
 
             cv::bitwise_and(mask, ws->bounds, res);
             cv::bitwise_xor(res, ws->bounds, res);
+
+            // ~~~~~ DEBUG ~~~~~~
             cv::Mat resized;
             cv::resize(res, resized, cv::Size(), WINDOW_SCALE, WINDOW_SCALE);
             cv::imshow("XOR", resized);
             while(true)
                 if(cv::waitKey(30) == 27)
                 {    cout<<"ESC pressed"<<endl<<endl; break;}
+            // ~~~ END DEBUG ~~~~
             if(cv::countNonZero(res) != ws->area)
             {
                 cout<<endl<<endl<<"On "<<colorToStr(c)<<endl;
@@ -581,46 +536,9 @@ namespace lw{
         return true;
     }
 
-    void getInstrMaterials(const Instruction * instr, Piece * p1, Piece * p2)
-    {
-        int numpieces;
-        if(instr->op == PLC)
-            numpieces = 2;
-        else
-            numpieces = 1;
-
-        for(int i = 0; i < numpieces; i++)
-        {
-            const char * r = (numpieces==1 || i==1) ? instr->r2 : instr->r1;
-            Piece * p = (i==1) ? p2 : p1;
-            cout<<r<<endl;
-            switch(r[0])
-            {
-                case 'R':
-                    p->c = red; break;
-                case 'Y':
-                    p->c = yellow; break;
-                case 'G':
-                    p->c = green; break;
-                case 'B':
-                    p->c = blue; break;
-                case 'W':
-                    p->c = white; break;
-
-            }
-            switch(r[1])
-            {
-                case 'R':
-                    p->s = rect; break;
-                case 'S':
-                    p->s = square; break;
-            }
-        }
-    }
-
     void drawWorkspace(cv::Mat frame, Workspace * ws)
     {
-        cv::rectangle(frame, ws->nw, ws->se, Green, 3);
+        cv::rectangle(frame, ws->nw, ws->se, drawColor(green), 3);
     }
 
     Instruction * getInstrStep(project_t projectName, int step)
@@ -633,19 +551,161 @@ namespace lw{
             return &(tower_ref.instr[step]);
     }
 
-    void drawNextInstr(cv::Mat frame, Workspace * ws, const Instruction * instr)
+    void getInstrMaterials(const Instruction * instr, Piece * p)
+    {
+        switch(instr->r1[0])
+        {
+            case 'R': p->c = red; break;
+            case 'Y': p->c = yellow; break;
+            case 'G': p->c = green; break;
+            case 'B': p->c = blue; break;
+            case 'W': p->c = white; break;
+
+        }
+        switch(instr->r1[1])
+        {
+            case 'R': p->s = rect; break;
+            case 'S': p->s = square; break;
+        }
+    }
+
+    void drawInstr(cv::Mat frame, Workspace * ws, const Instruction * instr)
     {
         if(!instr)
             cout<<"No instruction given"<<endl;
         else
         {
-            Piece p1, p2; getInstrMaterials(instr, &p1, &p2);
-            // ~~~~~ DEBUG ~~~~~
-            cout<<"P1: " << colorToStr(p1.c)<<" "<<shapeToStr(p1.s)<<endl;
-            if(p2.c)
-                cout<<"P2: " << colorToStr(p2.c)<<" "<<shapeToStr(p2.s)<<endl;
-            // ~~~ END DEBUG ~~~
-            //drawTarget()
+            Piece p; getInstrMaterials(instr, &p);
+            // findMaterials(frame, p);
+            if(instr->op == PLC)
+            {
+                cv::Point nw, se;
+                if(instr->r2[0] == 0) // Place at Center
+                {
+                    int wOff = SHORT/2;
+                    int hOff = (p.s==rect) ? LONG/2 : SHORT/2;
+                    if(ws->p == staircase){int t = wOff; wOff = hOff; hOff = t;}
+                    nw.x = ws->cc.x - wOff; nw.y = ws->cc.y - hOff;
+                    se.x = ws->cc.x + wOff; se.y = ws->cc.y + hOff;
+                    cv::rectangle(frame, nw, se, drawColor(p.c), 3);
+                    ws->nw.x = nw.x; ws->nw.y = nw.y;
+                    ws->se.x = se.x; ws->se.y = se.y;
+                    if(wOff*2==LONG){ws->nw.y+=(hOff*2);ws->se.y-=(hOff*2);}
+                }
+                else // Place at Target Vertex
+                {
+                    int w = ws->se.x - ws->nw.x;
+                    int h = (ws->nw.y > ws->se.y) ?
+                        ws->nw.y-ws->se.y : ws->se.y-ws->nw.y ;
+                    int pw = SHORT, ph = (p.s==rect) ? LONG : SHORT;
+                    if(ws->p==staircase){int t = pw; pw = h; ph = t;}
+                    cv::Point p1, p2;
+                    if(instr->r2[0]=='N')
+                    {
+                        switch(instr->r2[1])
+                        {
+                            case 'N':
+                            {
+                                if(h>w)
+                                {
+                                    p1.x = ws->nw.x; p1.y = ws->nw.y-ph;
+                                    p2.x = ws->nw.x+pw; p2.y = ws->nw.y;
+                                }
+                                else
+                                {
+                                    p1.x = ws->nw.x-pw; p1.y = ws->nw.y-ph;
+                                    p2.x = ws->nw.x; p2.y = ws->nw.y;
+                                }
+                            } break;
+                            case 'W':
+                            {
+                                if(h>w)
+                                {
+                                    p1.x = ws->nw.x-pw; p1.y = ws->nw.y;
+                                    p2.x = ws->nw.x; p2.y = ws->nw.y+ph;
+                                }
+                                else
+                                {
+                                    p1.x = ws->nw.x; p1.y = ws->nw.y;
+                                    p2.x = ws->nw.x+pw; p2.y = ws->nw.y+ph;
+                                }
+                            } break;
+                            case 'E':
+                            {
+                                if(h>w)
+                                {
+                                    cv::Point ne(ws->nw.x+w, ws->nw.y);
+                                    p1.x = ne.x; p1.y = ne.y;
+                                    p2.x = ne.x+pw; p2.y = ne.y+ph;
+                                }
+                                else
+                                {
+                                    cv::Point ne(ws->nw.x, ws->nw.y-h);
+                                    p1.x = ne.x; p1.y = ne.y-ph;
+                                    p2.x = ne.x+pw; p2.y = ne.y;
+                                }
+                            } break;
+                        }
+                    }
+                    else
+                    {
+                        switch(instr->r2[1])
+                        {
+                            case 'S':
+                            {
+                                if(h>w)
+                                {
+                                    p1.x = ws->se.x-pw; p1.y = ws->se.y;
+                                    p2.x = ws->se.x; p2.y = ws->se.y+ph;
+                                }
+                                else
+                                {
+                                    p1.x = ws->se.x; p1.y = ws->se.y-ph;
+                                    p2.x = ws->se.x+pw; p2.y = ws->se.y;
+                                }
+                            } break;
+                            case 'W':
+                            {
+                                if(h>w)
+                                {
+                                    cv::Point sw(ws->se.x-w, ws->nw.y);
+                                    p1.x = sw.x-pw; p1.y = sw.y-ph;
+                                    p2.x = sw.x; p2.y = sw.y;
+                                }
+                                else
+                                {
+                                    cv::Point sw(ws->se.x, ws->nw.y+h);
+                                    p1.x = sw.x-pw; p1.y = sw.y;
+                                    p2.x = sw.x; p2.y = sw.y+ph;
+                                }
+                            } break;
+                            case 'E':
+                            {
+                                if(h>w)
+                                {
+                                    p1.x = ws->se.x; p1.y = ws->se.y-ph;
+                                    p2.x = ws->se.x+pw; p2.y = ws->se.y;
+                                }
+                                else
+                                {
+                                    p1.x = ws->se.x-pw; p1.y = ws->se.y-ph;
+                                    p2.x = ws->se.x; p1.y = ws->se.y;
+                                }
+                            } break;
+                        }
+                    }
+                    cv::rectangle(frame, p1, p2, drawColor(p.c),3);
+                }
+            }
+            else
+            {
+
+            }
         }
+    }
+
+    bool instrDone(cv::Mat frame, Workspace * ws, const Instruction * instr)
+    {
+        return false;
     }
 }

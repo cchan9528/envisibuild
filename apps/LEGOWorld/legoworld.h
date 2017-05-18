@@ -13,8 +13,8 @@
 #define VIDEO 2
 #define NUM_COLORS 5
 
-#define NUMSTEPS_STRIPEDCUBE 5
-#define NUMSTEPS_STAIRCASE 3
+#define NUMSTEPS_STRIPEDCUBE 6
+#define NUMSTEPS_STAIRCASE 4
 #define NUMSTEPS_TOWER 3
 
 /******************************************************
@@ -48,7 +48,7 @@ namespace lw {
     typedef struct Piece{
         color_t c;
         shape_t s;
-        cv::Point center, north;
+        cv::Point cc;
     } Piece;
 
     typedef struct Building{
@@ -70,6 +70,7 @@ namespace lw {
     } Project;
 
     typedef struct Workspace{
+        project_t p;
         cv::Point cc, nw, se;
         cv::Mat bounds;
         int area;
@@ -91,9 +92,10 @@ namespace lw {
                         Colortab* tabs, int tabsSize);
 
     /* Workspace */
-    void buildWorkspace(cv::Mat frame, Workspace * ws);
+    void buildWorkspace(cv::Mat frame, Workspace * ws, project_t p);
     void drawWorkspace(cv::Mat frame, Workspace * ws);
-    void drawNextInstr(cv::Mat frame, Workspace * ws,const Instruction * instr);
+    void drawInstr(cv::Mat frame, Workspace * ws,const Instruction * instr);
+    bool instrDone(cv::Mat frame, Workspace * ws,const Instruction * instr);
     bool clearWorkspace(cv::Mat frame, Workspace * ws);
 }
 #endif
