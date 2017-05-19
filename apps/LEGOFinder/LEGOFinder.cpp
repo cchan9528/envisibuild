@@ -123,13 +123,13 @@ int main(int argc, char** argv)
             // cv::circle(imageInBGR, rr.center, radius, bbcolor, 10);
 
             // Draw Verticies
-            cout<<"Vertex Coordinates for Contour "<< j <<endl;
-            for(int l = 0; l < verts.size(); l++)
-            {
-                cv::circle(imageInBGR, verts[l], radius, bbcolor, 10);
-                cv::circle(frame, verts[l], radius, bbcolor, 10);
-                cout<<verts[l].x<<", "<<verts[l].y<<endl;
-            }cout<<endl;
+            // cout<<"Vertex Coordinates for Contour "<< j <<endl;
+            // for(int l = 0; l < verts.size(); l++)
+            // {
+            //     cv::circle(imageInBGR, verts[l], radius, bbcolor, 10);
+            //     cv::circle(frame, verts[l], radius, bbcolor, 10);
+            //     cout<<verts[l].x<<", "<<verts[l].y<<endl;
+            // }cout<<endl;
         }
 
         // ~~~~~ DEBUG ~~~~~

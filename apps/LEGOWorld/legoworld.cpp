@@ -62,9 +62,9 @@ lw::Instruction stripedcube_instr[6] = {
     { .op = PLC, .r1 = "BR", .r2 = "", .r3 = ""},
     { .op = PLC, .r1 = "BR", .r2 = "EE", .r3 = "WW"},
     { .op = STK, .r1 = "WR", .r2 = "NE", .r3 = "SE"},
-    { .op = STK, .r1 = "WR", .r2 = "NW", .r3 = "NE"},
-    { .op = STK, .r1 = "RR", .r2 = "NE", .r3 = "SW"},
-    { .op = STK, .r1 = "RR", .r2 = "NE", .r3 = "NW"}
+    { .op = PLC, .r1 = "WR", .r2 = "WW", .r3 = "EE"},
+    { .op = STK, .r1 = "RR", .r2 = "NW", .r3 = "SW"},
+    { .op = PLC, .r1 = "RR", .r2 = "EE", .r3 = "WW"}
 };
 const lw::Project stripedcube_ref = {
     .materials[red]   = {.c = red  , .sCount=0, .rCount=2},
@@ -78,8 +78,8 @@ const lw::Project stripedcube_ref = {
 lw::Instruction staircase_instr[4] = {
     { .op = PLC, .r1 = "RR", .r2 = "", .r3 = ""},
     { .op = PLC, .r1 = "RS", .r2 = "NN", .r3 = "EE"},
-    { .op = STK, .r1 = "RR", .r2 = "NW", .r3 = "NE"},
-    { .op = STK, .r1 = "RS", .r2 = "NW", .r3 = "SW"}
+    { .op = STK, .r1 = "RR", .r2 = "NW", .r3 = "NW"},
+    { .op = STK, .r1 = "RS", .r2 = "NW", .r3 = "NW"}
 };
 const lw::Project staircase_ref = {
     .materials[red] = {.c = red, .sCount=2, .rCount=2},
@@ -384,11 +384,11 @@ namespace lw{
             for( int k = 0; k < 4; k++ )
                 line( maskInBGR, points[k], points[(k+1)%4], green, thickness);
             // cout<<"Vertex Coordinates for Contour "<< i <<endl;
-            for(int l = 0; l < verts.size(); l++)
-            {
-                cv::circle(maskInBGR, verts[l], radius, green, thickness);
-                cout<<verts[l].x<<", "<<verts[l].y<<endl;
-            }cout<<endl;
+            // for(int l = 0; l < verts.size(); l++)
+            // {
+            //     cv::circle(maskInBGR, verts[l], radius, green, thickness);
+            //     cout<<verts[l].x<<", "<<verts[l].y<<endl;
+            // }cout<<endl;
             // END DEBUG
         }
         // DEBUG
@@ -484,9 +484,9 @@ namespace lw{
         cv::Mat mask(frame.rows, frame.cols, CV_8UC1, cv::Scalar(0));
         mask(cv::Rect(mask.cols/4, mask.rows/4, mask.cols/2, mask.rows/2))=255;
         ws->bounds = mask;
-        ws->cc = cv::Point2f(mask.cols/2, mask.rows/2);
-        ws->nw = cv::Point2f(mask.cols/4, mask.rows/4);
-        ws->se = cv::Point2f(3*(mask.cols/4), 3*(mask.rows/4));
+        ws->b_cc = cv::Point2f(mask.cols/2, mask.rows/2);
+        ws->b_nw = cv::Point2f(mask.cols/4, mask.rows/4);
+        ws->b_se = cv::Point2f(3*(mask.cols/4), 3*(mask.rows/4));
         ws->area = cv::countNonZero(mask);
         ws->p = p;
     }
@@ -538,7 +538,7 @@ namespace lw{
 
     void drawWorkspace(cv::Mat frame, Workspace * ws)
     {
-        cv::rectangle(frame, ws->nw, ws->se, drawColor(green), 3);
+        cv::rectangle(frame, ws->b_nw, ws->b_se, drawColor(green), 3);
     }
 
     Instruction * getInstrStep(project_t projectName, int step)
@@ -576,7 +576,11 @@ namespace lw{
         else
         {
             Piece p; getInstrMaterials(instr, &p);
+            // ~~~~~ DEBUG ~~~~~
+            cout<<"Color: "<<colorToStr(p.c)<<" Shape: "<<shapeToStr(p.s)<<endl;
+            // ~~~ END DEBUG ~~~
             // findMaterials(frame, p);
+            cv::Point p1, p2;  // for new rectangle
             if(instr->op == PLC)
             {
                 cv::Point nw, se;
@@ -585,8 +589,8 @@ namespace lw{
                     int wOff = SHORT/2;
                     int hOff = (p.s==rect) ? LONG/2 : SHORT/2;
                     if(ws->p == staircase){int t = wOff; wOff = hOff; hOff = t;}
-                    nw.x = ws->cc.x - wOff; nw.y = ws->cc.y - hOff;
-                    se.x = ws->cc.x + wOff; se.y = ws->cc.y + hOff;
+                    nw.x = ws->b_cc.x - wOff; nw.y = ws->b_cc.y - hOff;
+                    se.x = ws->b_cc.x + wOff; se.y = ws->b_cc.y + hOff;
                     cv::rectangle(frame, nw, se, drawColor(p.c), 3);
                     ws->nw.x = nw.x; ws->nw.y = nw.y;
                     ws->se.x = se.x; ws->se.y = se.y;
@@ -606,7 +610,7 @@ namespace lw{
                         {
                             case 'N':
                             {
-                                if(h>w)
+                                if(h>=w)
                                 {
                                     p1.x = ws->nw.x; p1.y = ws->nw.y-ph;
                                     p2.x = ws->nw.x+pw; p2.y = ws->nw.y;
@@ -619,7 +623,7 @@ namespace lw{
                             } break;
                             case 'W':
                             {
-                                if(h>w)
+                                if(h>=w)
                                 {
                                     p1.x = ws->nw.x-pw; p1.y = ws->nw.y;
                                     p2.x = ws->nw.x; p2.y = ws->nw.y+ph;
@@ -632,7 +636,7 @@ namespace lw{
                             } break;
                             case 'E':
                             {
-                                if(h>w)
+                                if(h>=w)
                                 {
                                     cv::Point ne(ws->nw.x+w, ws->nw.y);
                                     p1.x = ne.x; p1.y = ne.y;
@@ -653,20 +657,20 @@ namespace lw{
                         {
                             case 'S':
                             {
-                                if(h>w)
+                                if(h>=w)
                                 {
                                     p1.x = ws->se.x-pw; p1.y = ws->se.y;
                                     p2.x = ws->se.x; p2.y = ws->se.y+ph;
                                 }
                                 else
                                 {
-                                    p1.x = ws->se.x; p1.y = ws->se.y-ph;
-                                    p2.x = ws->se.x+pw; p2.y = ws->se.y;
+                                    p1.x = ws->se.x; p1.y = ws->se.y;
+                                    p2.x = ws->se.x+pw; p2.y = ws->se.y+ph;
                                 }
                             } break;
                             case 'W':
                             {
-                                if(h>w)
+                                if(h>=w)
                                 {
                                     cv::Point sw(ws->se.x-w, ws->nw.y);
                                     p1.x = sw.x-pw; p1.y = sw.y-ph;
@@ -681,7 +685,7 @@ namespace lw{
                             } break;
                             case 'E':
                             {
-                                if(h>w)
+                                if(h>=w)
                                 {
                                     p1.x = ws->se.x; p1.y = ws->se.y-ph;
                                     p2.x = ws->se.x+pw; p2.y = ws->se.y;
@@ -695,11 +699,121 @@ namespace lw{
                         }
                     }
                     cv::rectangle(frame, p1, p2, drawColor(p.c),3);
+                    ws->nw = p1; ws->se=p2;
                 }
             }
             else
             {
+                cv::Point nw, se;
+                int w = ws->se.x - ws->nw.x;
+                int h = (ws->nw.y > ws->se.y) ?
+                    ws->nw.y-ws->se.y : ws->se.y-ws->nw.y ;
+                int pw = SHORT, ph = (p.s==rect) ? LONG : SHORT;
+                if(ws->p==staircase){int t = pw; pw = h; ph = t;}
+                // if(instr->r2[0]=='N')
+                // {
+                //     if(instr->r2[1]=='W')
+                //         p1 = ws->nw;
+                //     else
+                //     {
+                //         p1.x = (h>=w) ? ws->nw.x+w : ws->nw.x;
+                //         p1.y = (h>=w) ? ws->nw.y : ws->nw.y-h;
+                //     }
+                // }
+                // else
+                // {
+                //     if(instr->r2[1]=='W')
+                //     {
+                //         p1.x = (h>=w) ? ws->nw.x-w : ws->nw.x;
+                //         p1.y = (h>=w) ? ws->nw.y : ws->nw.y+h;
+                //     }
+                //     else
+                //         p1 = ws->se;
+                // }
 
+                const char * ra = instr->r2;
+                const char * rb = instr->r3;
+                // Normalize nw, se Vertices;
+                // cv::Point nw, se;
+                // nw.x = ws->nw.x; nw.y = (w>h) ? ws->nw.y-h : ws->nw.y;
+                // se.x = ws->se.x; se.y = (w>h) ? ws->se.y : ws->se.y+h;
+
+                // opposites are equal in stacking case
+                // nw = se ; ne = sw;
+                if( ((ra=="NE"&&rb=="SW") || (rb=="NE"&&ra=="SW")) ||
+                    ((ra=="NW"&&rb=="SE") || (rb=="NW"&&ra=="SE")) ||
+                    (ra[0] == rb[0] && ra[1] == rb[1]))
+                {   p1 = ws->nw; p2 = ws->se;}
+                else
+                {
+                    if(ra[0]=='N')
+                    {
+                        if(h>=w)
+                        {
+                            p2.y=ws->nw.y+pw;
+                            if(ra[1]=='W')
+                            {
+                                p1=ws->nw; p2.x = ws->nw.x+ph;
+                                ws->nw.y += pw;
+                                ws->se.x = ws->nw.x+ph; ws->se.y = ws->nw.y+pw;
+                            }
+                            else
+                            {
+                                p1.x=ws->nw.x+w; p1.y=ws->nw.y; p2.x = p1.x-ph;
+                                ws->nw = p2; ws->se = p1;
+                            }
+                        }
+                        else
+                        {
+                            p2.x=ws->nw.x+pw;
+                            if(ra[1]=='W')
+                            {
+                                p1=ws->nw; p2.y = ws->nw.y-ph;
+                                ws->nw.y -= ph;
+                                ws->se.x = ws->nw.x+pw; ws->se.y = ws->nw.y;
+                            }
+                            else
+                            {
+                                p1.x=ws->nw.x; p1.y=ws->nw.y-h; p2.y = p1.y+ph;
+                                ws->nw = p1; ws->se = p2;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        if(h>=w)
+                        {
+                            p2.y=ws->nw.y-pw;
+                            if(ra[1]=='E')
+                            {
+                                p1=ws->se; p2.x = ws->se.x-ph;
+                                ws->se.y -= pw;
+                                ws->nw.x = ws->se.x-ph; ws->nw.y = ws->se.y;
+                            }
+                            else
+                            {
+                                p1.x=ws->se.x-w; p1.y=ws->se.y; p2.x = p1.x+ph;
+                                ws->nw=p1; ws->se=p2;
+                            }
+                        }
+                        else
+                        {
+                            p2.x=ws->se.x-pw;
+                            if(ra[1]=='E')
+                            {
+                                p1=ws->se; p2.y = ws->se.y+ph;
+                                ws->se.y += ph;
+                                ws->nw.x = ws->se.x-pw; ws->nw.y = ws->se.y;
+                            }
+                            else
+                            {
+                                p1.x=ws->se.x; p1.y=ws->se.y+h; p2.y = p1.y-ph;
+                                ws->nw=p2; ws->se=p1;
+                            }
+                        }
+                    }
+                }
+                cv::rectangle(frame, p1, p2, drawColor(p.c),3);
             }
         }
     }

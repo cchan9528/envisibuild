@@ -71,7 +71,8 @@ namespace lw {
 
     typedef struct Workspace{
         project_t p;
-        cv::Point cc, nw, se;
+        cv::Point b_cc, b_nw, b_se;
+        cv::Point nw, se;
         cv::Mat bounds;
         int area;
     } Workspace;

@@ -90,7 +90,7 @@ int main(int argc, char** argv)
             lw::Instruction * curInstr;
             // for(int i=0; i < numsteps;)
             // ~~~~~ DEBUG ~~~~~
-            for(int i=-1; i < numsteps;)
+            for(int i=0; i < numsteps;)
             // ~~~ END DEBUG ~~~
             {
                 cv::Mat tempFrame = frame.clone();
@@ -100,7 +100,7 @@ int main(int argc, char** argv)
                 // while(!lw::clearWorkspace(frame,&ws)){};
 
                 cout<<"Step "<<i+1<<": "<<endl;
-                curInstr = lw::getInstrStep(projectName, i+1);
+                curInstr = lw::getInstrStep(projectName, i);
                 lw::drawInstr(tempFrame, &ws, curInstr);
                 cout<<endl<<endl<<endl;
 
@@ -136,7 +136,7 @@ int main(int argc, char** argv)
             lw::Instruction * curInstr;
             // for(int i=0; i < numsteps;)
             // ~~~~~ DEBUG ~~~~~
-            for(int i=-1; i < numsteps && video.isOpened();)
+            for(int i=0; i < numsteps && video.isOpened();)
             // ~~~ END DEBUG ~~~
             {
                 video >> frame;
@@ -146,7 +146,7 @@ int main(int argc, char** argv)
                 // while(!lw::clearWorkspace(frame,&ws)){};
 
                 cout<<"Step "<<i+1<<": "<<endl;
-                curInstr = lw::getInstrStep(projectName, i+1);
+                curInstr = lw::getInstrStep(projectName, i);
                 lw::drawInstr(frame, &ws, curInstr);
                 cout<<endl<<endl<<endl;
 
