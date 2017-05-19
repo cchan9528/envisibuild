@@ -95,8 +95,6 @@ int main(int argc, char** argv)
             {
                 cv::Mat tempFrame = frame.clone();
                 lw::drawWorkspace(tempFrame, &ws);
-                if(lw::instrDone(tempFrame, &ws, curInstr))
-                    i++;
                 // while(!lw::clearWorkspace(frame,&ws)){};
 
                 cout<<"Step "<<i+1<<": "<<endl;
@@ -108,12 +106,24 @@ int main(int argc, char** argv)
                 cv::Mat resized;
                 cv::resize(tempFrame, resized, cv::Size(), .5, .5);
                 cv::imshow("original", resized);
+                // i++;
                 while(true)
-                    if(cv::waitKey(30) == 27)
-                    {    cout<<"ESC pressed"<<endl<<endl; break;}
-                i++;
                 // ~~~ END DEBUG ~~~
-            }
+                if(cv::waitKey(30) == 27)
+                {    cout<<"ESC pressed"<<endl<<endl; break;}
+
+                if(lw::instrDone(tempFrame, &ws, curInstr))
+                    i++;
+
+                // ~~~~~ DEBUG ~~~~~
+                cv::resize(ws.bounds, resized, cv::Size(), .5, .5);
+                cv::imshow("mask", resized);
+                // i++;
+                while(true)
+                if(cv::waitKey(30) == 27)
+                {    cout<<"ESC pressed"<<endl<<endl; break;}
+                // ~~~ END DEBUG ~~~
+        }
         }
         else
         {
@@ -141,8 +151,6 @@ int main(int argc, char** argv)
             {
                 video >> frame;
                 lw::drawWorkspace(frame, &ws);
-                if(lw::instrDone(frame, &ws, curInstr))
-                    i++;
                 // while(!lw::clearWorkspace(frame,&ws)){};
 
                 cout<<"Step "<<i+1<<": "<<endl;
@@ -155,8 +163,20 @@ int main(int argc, char** argv)
                 cv::resize(frame, resized, cv::Size(), .5, .5);
                 cv::imshow("original", resized);
                 // while(true)
-                    if(cv::waitKey(1) == 27)
-                    {    cout<<"ESC pressed"<<endl<<endl; break;}
+                // ~~~ END DEBUG ~~~
+                if(cv::waitKey(1) == 27)
+                {    cout<<"ESC pressed"<<endl<<endl; break;}
+
+                if(lw::instrDone(frame, &ws, curInstr))
+                    i++;
+
+                // ~~~~~ DEBUG ~~~~~
+                cv::resize(ws.bounds, resized, cv::Size(), .5, .5);
+                cv::imshow("mask", resized);
+                // i++;
+                while(true)
+                if(cv::waitKey(30) == 27)
+                {    cout<<"ESC pressed"<<endl<<endl; break;}
                 // ~~~ END DEBUG ~~~
             }
         }

@@ -24,7 +24,7 @@
  ******************************************************/
 
 // enum bool { false, true };
-enum color_t { red=0, blue=3, green=2, yellow=1, white=4 };
+enum color_t { red=0, blue=3, green=2, yellow=1, white=4, clear };
 
 enum shape_t { square, rect, unkwn };
 
@@ -71,6 +71,7 @@ namespace lw {
 
     typedef struct Workspace{
         project_t p;
+        color_t missing;
         cv::Point b_cc, b_nw, b_se;
         cv::Point nw, se;
         cv::Mat bounds;

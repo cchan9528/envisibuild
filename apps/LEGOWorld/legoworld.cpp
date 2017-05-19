@@ -650,7 +650,6 @@ namespace lw{
                         // outside of project scope
                     }
                 }
-                cv::rectangle(frame, p1, p2, drawColor(p.c), 3);
                 if(ph<pw){p1.y+=ph; p2.y-=ph;}
                 ws->nw = p1; ws->se = p2;
             }
@@ -731,13 +730,123 @@ namespace lw{
                         }
                     }
                 }
-                cv::rectangle(frame, p1, p2, drawColor(p.c),3);
             }
+            cv::rectangle(frame, p1, p2, drawColor(p.c), 3);
+
+            cout<<p1<<" p1: p2 "<<p2<<endl;
+            ws->bounds(cv::Rect(p1,p2)) = cv::Scalar(0);
+            ws->missing = p.c;
+            // ~~~~~ DEBUG ~~~~~
+            cv::Mat resized;
+            cv::resize(ws->bounds, resized, cv::Size(), .5, .5);
+            cv::imshow("mask", resized);
+            while(true)
+            if(cv::waitKey(30) == 27)
+            {    cout<<"ESC pressed"<<endl<<endl; break;}
+            // ~~~ END DEBUG ~~~
         }
     }
 
     bool instrDone(cv::Mat frame, Workspace * ws, const Instruction * instr)
     {
-        return false;
+        // cv::Mat frameInHSV;
+        // cv::cvtColor(frame, frameInHSV, cv::COLOR_BGR2HSV);
+        //
+        // cv::Mat mask;
+        // cv::Scalar lb, ub;
+        // color_t c = (*tab).c;
+        // switch(c)
+        // {
+        //     case green: lb = greenLB; ub = greenUB; break;
+        //     case blue: lb = blueLB; ub = blueUB; break;
+        //     case red: lb = redLB; ub = redUB; break;
+        //     case yellow: lb = yellowLB; ub = yellowUB; break;
+        //     case white: lb = whiteLB; ub = whiteUB; break;
+        // }
+        // string color = colorToStr(c);
+        // cv::inRange(frameInHSV, lb, ub, mask);
+        //
+        // // Filter Noise
+        // cv::blur(mask, mask, cv::Size(5,5));
+        // cv::erode(mask, mask, getStructuringElement(cv::MORPH_RECT,
+        //                                             cv::Size(3,3)));
+        //
+        // // clear workspace
+        //
+        // // DEBUG
+        // cv::Mat maskInBGR;
+        // cv::cvtColor(mask, maskInBGR, CV_GRAY2BGR);
+        // // END DEBUG
+        //
+        // // Find LEGOs
+        // vector< vector<cv::Point> > contours;
+        // cv::findContours(mask.clone(), contours,
+        //                 CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE);
+        //
+        // for(int i = 0; i < contours.size(); i++)
+        // {
+        //     // Draw Bounding Boxes Around LEGOs (Bounding Box with Minimum Area)
+        //     cv::RotatedRect rr = cv::minAreaRect(contours[i]);
+        //
+        //     // Extract ROI
+        //     cv::Rect r = rr.boundingRect();
+        //     r.x = r.x<0 ? 0 : r.x;
+        //     r.y = r.y<0 ? 0 : r.y;
+        //     r.width  = r.width+r.x>mask.cols  ? mask.cols-r.x:r.width;
+        //     r.height = r.height+r.y>mask.rows ? mask.rows-r.y:r.height;
+        //     cv::Mat roi; (mask)(r).copyTo(roi);
+        //
+        //     // Calculate Area and (Average) Density of ROI
+        //     double numWhites = (double) cv::countNonZero(roi);
+        //     double area = contourArea(contours[i]);
+        //     double density = numWhites/area;
+        //
+        //     // Find Verticies of Polygonal Approximation of Contour
+        //     vector<cv::Point> verts;
+        //     double deviation = .02 * cv::arcLength(contours[i], true);
+        //     cv::approxPolyDP(contours[i], verts, deviation, true);
+        //     int numVerts = verts.size();
+        //
+        //     // Ignore Noise
+        //     if(!(S_AREA_LB <= area) || (density < DENSITY_THRESHOLD))
+        //         continue;
+        //
+        //     // Update Color Tab
+        //     shape_t s = findShape(rr, numVerts, area, mask.cols, mask.rows);
+        //     if(s == square)
+        //         (*tab).sCount++;
+        //     else if(s == rect)
+        //         (*tab).rCount++;
+        //     else
+        //         (*tab).uCount++;
+        //
+        //     // DEBUG
+        //     //cv::Scalar green(0,255,0);
+        //     double radius = 25;
+        //     int thickness = 10;
+        //     cv::Point2f points[4]; rr.points( points );
+        //     for( int k = 0; k < 4; k++ )
+        //         line( maskInBGR, points[k], points[(k+1)%4], green, thickness);
+        //     // cout<<"Vertex Coordinates for Contour "<< i <<endl;
+        //     // for(int l = 0; l < verts.size(); l++)
+        //     // {
+        //     //     cv::circle(maskInBGR, verts[l], radius, green, thickness);
+        //     //     cout<<verts[l].x<<", "<<verts[l].y<<endl;
+        //     // }cout<<endl;
+        //     // END DEBUG
+        // }
+        // // DEBUG
+        // if(contours.size()!=0)
+        // {
+        //     cv::Mat resized;
+        //     cv::resize(maskInBGR, resized,cv::Size(),WINDOW_SCALE,WINDOW_SCALE);
+        //     cv::imshow(color + "(blurred)", resized);
+        //     while(true)
+        //         if(cv::waitKey(30) == 27)
+        //         {    cout<<"ESC pressed"<<endl<<endl; break;}
+        // }
+        // // END DEBUG=
+        ws->bounds(cv::Rect(ws->b_nw,ws->b_se)) = cv::Scalar(255);
+        return true;
     }
 }
