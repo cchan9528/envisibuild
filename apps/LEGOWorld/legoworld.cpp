@@ -48,6 +48,7 @@ using namespace std;
 #define R_AREA_UB 100000
 #define SHORT 150
 #define LONG 300
+#define FILL_DIFF 500
 #define DENSITY_THRESHOLD 0.45
 
 #define WINDOW_SCALE .5
@@ -59,12 +60,12 @@ using namespace std;
 
 // Striped Cube
 lw::Instruction stripedcube_instr[6] = {
-    { .op = PLC, .r1 = "BR", .r2 = "", .r3 = ""},
-    { .op = PLC, .r1 = "BR", .r2 = "EE", .r3 = ""},
-    { .op = STK, .r1 = "WR", .r2 = "NE", .r3 = "SE"},
-    { .op = PLC, .r1 = "WR", .r2 = "WW", .r3 = ""},
-    { .op = STK, .r1 = "RR", .r2 = "NW", .r3 = "SW"},
-    { .op = PLC, .r1 = "RR", .r2 = "EE", .r3 = ""}
+    { .op = PLC, .r1 = "BR", .r2 = XX, .r3 = XX},
+    { .op = PLC, .r1 = "BR", .r2 = EE, .r3 = XX},
+    { .op = STK, .r1 = "WR", .r2 = NE, .r3 = SE},
+    { .op = PLC, .r1 = "WR", .r2 = WW, .r3 = XX},
+    { .op = STK, .r1 = "RR", .r2 = NW, .r3 = SW},
+    { .op = PLC, .r1 = "RR", .r2 = EE, .r3 = XX}
 };
 const lw::Project stripedcube_ref = {
     .materials[red]   = {.c = red  , .sCount=0, .rCount=2},
@@ -76,10 +77,10 @@ const lw::Project stripedcube_ref = {
 
 // Staircase
 lw::Instruction staircase_instr[4] = {
-    { .op = PLC, .r1 = "RR", .r2 = "", .r3 = ""},
-    { .op = PLC, .r1 = "RS", .r2 = "NN", .r3 = ""},
-    { .op = STK, .r1 = "RR", .r2 = "NW", .r3 = "NE"},
-    { .op = STK, .r1 = "RS", .r2 = "NW", .r3 = "SW"}
+    { .op = PLC, .r1 = "RR", .r2 = XX, .r3 = XX},
+    { .op = PLC, .r1 = "RS", .r2 = NN, .r3 = XX},
+    { .op = STK, .r1 = "RR", .r2 = NW, .r3 = NE},
+    { .op = STK, .r1 = "RS", .r2 = NW, .r3 = SW}
 };
 const lw::Project staircase_ref = {
     .materials[red] = {.c = red, .sCount=2, .rCount=2},
@@ -89,9 +90,9 @@ const lw::Project staircase_ref = {
 
 // Tower
 lw::Instruction tower_instr[3] = {
-    { .op = PLC, .r1 = "GS", .r2 = "", .r3 = ""},
-    { .op = STK, .r1 = "GS", .r2 = "NW", .r3 = "NW"},
-    { .op = STK, .r1 = "GS", .r2 = "NW", .r3 = "NW"}
+    { .op = PLC, .r1 = "GS", .r2 = XX, .r3 = XX},
+    { .op = STK, .r1 = "GS", .r2 = NW, .r3 = NW},
+    { .op = STK, .r1 = "GS", .r2 = NW, .r3 = NW}
 };
 const lw::Project tower_ref = {
     .materials[green] = {.c = green, .sCount=3, .rCount=0},
@@ -197,7 +198,7 @@ namespace lw{
             default: return "";
         }
     }
-    project_t strToProject(string s)
+    project_t strToProj(string s)
     {
         if(s=="stripedcube" || s == "cube")
             return stripedcube;
@@ -442,13 +443,7 @@ namespace lw{
             case stripedcube: projectRef = &stripedcube_ref; break;
             case staircase: projectRef = &staircase_ref; break;
             case tower: projectRef = &tower_ref; break;
-            default:
-                cout<<"\n\nProject not available."<<endl;
-                cout<<"Please choose an available project:\n"\
-                    <<"    . stripedcube\n"\
-                    <<"    . staircase\n"\
-                    <<"    . tower\n"<<endl<<endl;
-                return false;
+            default: return false;
         }
 
         const Colortab * projBlocks = (*projectRef).materials;
@@ -489,51 +484,12 @@ namespace lw{
         ws->b_se = cv::Point2f(3*(mask.cols/4), 3*(mask.rows/4));
         ws->area = cv::countNonZero(mask);
         ws->p = p;
+        ws->step = 0;
     }
 
     bool clearWorkspace(cv::Mat frame, Workspace * ws)
     {
-        cv::Mat frameInHSV, mask, res;
-        cv::cvtColor(frame, frameInHSV, cv::COLOR_BGR2HSV);
-        cv::Scalar lb, ub;
-
-        for(int c = red; c < NUM_COLORS; c++)
-        {
-            switch(c)
-            {
-                case green: lb = greenLB; ub = greenUB; break;
-                case blue: lb = blueLB; ub = blueUB; break;
-                case red: lb = redLB; ub = redUB; break;
-                case yellow: lb = yellowLB; ub = yellowUB; break;
-                case white: lb = whiteLB; ub = whiteUB; break;
-            }
-            string color = colorToStr(c);
-            cv::inRange(frameInHSV, lb, ub, mask);
-
-            // Filter Noise
-            cv::blur(mask, mask, cv::Size(5,5));
-            cv::erode(mask, mask, getStructuringElement(cv::MORPH_RECT,
-                                                        cv::Size(3,3)));
-
-            cv::bitwise_and(mask, ws->bounds, res);
-            cv::bitwise_xor(res, ws->bounds, res);
-
-            // ~~~~~ DEBUG ~~~~~~
-            cv::Mat resized;
-            cv::resize(res, resized, cv::Size(), WINDOW_SCALE, WINDOW_SCALE);
-            cv::imshow("XOR", resized);
-            while(true)
-                if(cv::waitKey(30) == 27)
-                {    cout<<"ESC pressed"<<endl<<endl; break;}
-            // ~~~ END DEBUG ~~~~
-            if(cv::countNonZero(res) != ws->area)
-            {
-                cout<<endl<<endl<<"On "<<colorToStr(c)<<endl;
-                cout<<"Please clear workspace!"<<endl<<endl;
-                return false;
-            }
-        }
-        return true;
+        return false;
     }
 
     void drawWorkspace(cv::Mat frame, Workspace * ws)
@@ -574,11 +530,11 @@ namespace lw{
         if(!instr)
             cout<<"No instruction given"<<endl;
         else
-        {
+        {   cout<<"\n>>> On Step "<<ws->step<<"..."<<endl;
             // Current Register Information for Instruction
             Piece p; getInstrMaterials(instr, &p);
-            const char * ra = instr->r2;
-            const char * rb = instr->r3;
+            dir_t ra = instr->r2;
+            dir_t rb = instr->r3;
             // findMaterials(frame, p);
 
             // Current Target and Piece Dimensions (and Orientation)
@@ -587,17 +543,11 @@ namespace lw{
                 ws->nw.y-ws->se.y : ws->se.y-ws->nw.y ;
             int pw = SHORT, ph = (p.s==rect) ? LONG : SHORT;
 
-            // ~~~~~ DEBUG ~~~~~
-            cout<<h<<" h:w "<<w<<endl;
-            cout<<ph<<" ph:pw "<<pw<<endl;
-            cout<<"Color: "<<colorToStr(p.c)<<" Shape: "<<shapeToStr(p.s)<<endl;
-            cout<<instr->r2<<endl<<instr->r3<<endl;
-            // ~~~ END DEBUG ~~~
-
+            // Handle Instruction; Result is a Drawn Box to Direct User
             cv::Point p1, p2;
             if(instr->op==PLC)
             {
-                if(instr->r2[0]==0) // Place at Center
+                if(ra==XX) // Place at Center
                 {
                     int wOff = SHORT/2;
                     int hOff = (p.s==rect) ? LONG/2 : SHORT/2;
@@ -608,37 +558,37 @@ namespace lw{
                 }
                 else
                 {
-                    if(ra[0]==ra[1])
+                    if(ra==NN||ra==SS||ra==EE||ra==WW)
                     {
                         if(pw!=w){int t=pw; pw=ph; ph=t;}
                         cv::Point tl = ws->nw, br = ws->se;
-                        char dir = ra[0];
+                        dir_t dir = ra;
                         if(h<w)
                         {
                             tl.y -= h; br.y += h;
-                            switch(ra[0])
+                            switch(ra)
                             {
-                                case 'N': dir='W'; break;
-                                case 'S': dir='E'; break;
-                                case 'E': dir='N'; break;
-                                case 'W': dir='S'; break;
+                                case NN: dir=WW; break;
+                                case SS: dir=EE; break;
+                                case EE: dir=NN; break;
+                                case WW: dir=SS; break;
                             }
                         }
                         switch(dir)
                         {
-                            case 'N':
+                            case NN:
                                 p1.x = tl.x; p1.y = tl.y-ph;
                                 p2.x = tl.x + pw; p2.y = tl.y;
                                 break;
-                            case 'S':
+                            case SS:
                                 p1.x = br.x - pw; p1.y = br.y;
                                 p2.x = br.x; p2.y = br.y + ph;
                                 break;
-                            case 'E':
+                            case EE:
                                 p1.x = tl.x+w; p1.y = tl.y;
                                 p2.x = br.x+pw; p2.y = br.y;
                                 break;
-                            case 'W':
+                            case WW:
                                 p1.x = tl.x-pw; p1.y = tl.y;
                                 p2.x = br.x - w; p2.y = br.y;
                                 break;
@@ -655,18 +605,18 @@ namespace lw{
             }
             else
             {
-                if( ((ra=="NE"&&rb=="SW") || (rb=="NE"&&ra=="SW")) ||
-                    ((ra=="NW"&&rb=="SE") || (rb=="NW"&&ra=="SE")) ||
-                    (ra[0] == rb[0] && ra[1] == rb[1]))
+                if( ((ra==NE&&rb==SW) || (rb==NE&&ra==SW)) ||
+                    ((ra==NW&&rb==SE) || (rb==NW&&ra==SE)) ||
+                    (ra==rb))
                 {   p1 = ws->nw; p2 = ws->se;}
                 else
                 {
-                    if(ra[0]=='N')
+                    if(ra==NW||ra==NE)
                     {
                         if(h>=w)
                         {
                             p2.y=ws->nw.y+pw;
-                            if(ra[1]=='W')
+                            if(ra==NW)
                             {
                                 p1=ws->nw; p2.x = ws->nw.x+ph;
                                 ws->nw.y += pw;
@@ -681,7 +631,7 @@ namespace lw{
                         else
                         {
                             p2.x=ws->nw.x+pw;
-                            if(ra[1]=='W')
+                            if(ra==NW)
                             {
                                 p1=ws->nw; p2.y = ws->nw.y-ph;
                                 ws->se.y = ws->nw.y;
@@ -700,7 +650,7 @@ namespace lw{
                         if(h>=w)
                         {
                             p2.y=ws->nw.y-pw;
-                            if(ra[1]=='E')
+                            if(ra==SE)
                             {
                                 p1=ws->se; p2.x = ws->se.x-ph;
                                 ws->se.y -= pw;
@@ -715,7 +665,7 @@ namespace lw{
                         else
                         {
                             p2.x=ws->se.x-pw;
-                            if(ra[1]=='E')
+                            if(ra==SE)
                             {
                                 p1=ws->se; p2.y = ws->se.y+ph;
                                 ws->nw.y = ws->se.y;
@@ -731,122 +681,88 @@ namespace lw{
                     }
                 }
             }
-            cv::rectangle(frame, p1, p2, drawColor(p.c), 3);
-
-            cout<<p1<<" p1: p2 "<<p2<<endl;
+            cv::Mat roi = frame(cv::Rect(p1,p2));
+            cv::Mat shade(roi.size(), CV_8UC3, drawColor(p.c));
+            cv::addWeighted(shade, .3, roi, .7, 0.0, roi);
+            cv::rectangle(frame, p1, p2, drawColor(p.c), 2);
             ws->bounds(cv::Rect(p1,p2)) = cv::Scalar(0);
             ws->missing = p.c;
-            // ~~~~~ DEBUG ~~~~~
-            cv::Mat resized;
-            cv::resize(ws->bounds, resized, cv::Size(), .5, .5);
-            cv::imshow("mask", resized);
-            while(true)
-            if(cv::waitKey(30) == 27)
-            {    cout<<"ESC pressed"<<endl<<endl; break;}
-            // ~~~ END DEBUG ~~~
         }
     }
 
     bool instrDone(cv::Mat frame, Workspace * ws, const Instruction * instr)
     {
-        // cv::Mat frameInHSV;
-        // cv::cvtColor(frame, frameInHSV, cv::COLOR_BGR2HSV);
-        //
-        // cv::Mat mask;
-        // cv::Scalar lb, ub;
-        // color_t c = (*tab).c;
-        // switch(c)
-        // {
-        //     case green: lb = greenLB; ub = greenUB; break;
-        //     case blue: lb = blueLB; ub = blueUB; break;
-        //     case red: lb = redLB; ub = redUB; break;
-        //     case yellow: lb = yellowLB; ub = yellowUB; break;
-        //     case white: lb = whiteLB; ub = whiteUB; break;
-        // }
-        // string color = colorToStr(c);
-        // cv::inRange(frameInHSV, lb, ub, mask);
-        //
-        // // Filter Noise
-        // cv::blur(mask, mask, cv::Size(5,5));
-        // cv::erode(mask, mask, getStructuringElement(cv::MORPH_RECT,
-        //                                             cv::Size(3,3)));
-        //
-        // // clear workspace
-        //
-        // // DEBUG
-        // cv::Mat maskInBGR;
-        // cv::cvtColor(mask, maskInBGR, CV_GRAY2BGR);
-        // // END DEBUG
-        //
-        // // Find LEGOs
-        // vector< vector<cv::Point> > contours;
-        // cv::findContours(mask.clone(), contours,
-        //                 CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE);
-        //
-        // for(int i = 0; i < contours.size(); i++)
-        // {
-        //     // Draw Bounding Boxes Around LEGOs (Bounding Box with Minimum Area)
-        //     cv::RotatedRect rr = cv::minAreaRect(contours[i]);
-        //
-        //     // Extract ROI
-        //     cv::Rect r = rr.boundingRect();
-        //     r.x = r.x<0 ? 0 : r.x;
-        //     r.y = r.y<0 ? 0 : r.y;
-        //     r.width  = r.width+r.x>mask.cols  ? mask.cols-r.x:r.width;
-        //     r.height = r.height+r.y>mask.rows ? mask.rows-r.y:r.height;
-        //     cv::Mat roi; (mask)(r).copyTo(roi);
-        //
-        //     // Calculate Area and (Average) Density of ROI
-        //     double numWhites = (double) cv::countNonZero(roi);
-        //     double area = contourArea(contours[i]);
-        //     double density = numWhites/area;
-        //
-        //     // Find Verticies of Polygonal Approximation of Contour
-        //     vector<cv::Point> verts;
-        //     double deviation = .02 * cv::arcLength(contours[i], true);
-        //     cv::approxPolyDP(contours[i], verts, deviation, true);
-        //     int numVerts = verts.size();
-        //
-        //     // Ignore Noise
-        //     if(!(S_AREA_LB <= area) || (density < DENSITY_THRESHOLD))
-        //         continue;
-        //
-        //     // Update Color Tab
-        //     shape_t s = findShape(rr, numVerts, area, mask.cols, mask.rows);
-        //     if(s == square)
-        //         (*tab).sCount++;
-        //     else if(s == rect)
-        //         (*tab).rCount++;
-        //     else
-        //         (*tab).uCount++;
-        //
-        //     // DEBUG
-        //     //cv::Scalar green(0,255,0);
-        //     double radius = 25;
-        //     int thickness = 10;
-        //     cv::Point2f points[4]; rr.points( points );
-        //     for( int k = 0; k < 4; k++ )
-        //         line( maskInBGR, points[k], points[(k+1)%4], green, thickness);
-        //     // cout<<"Vertex Coordinates for Contour "<< i <<endl;
-        //     // for(int l = 0; l < verts.size(); l++)
-        //     // {
-        //     //     cv::circle(maskInBGR, verts[l], radius, green, thickness);
-        //     //     cout<<verts[l].x<<", "<<verts[l].y<<endl;
-        //     // }cout<<endl;
-        //     // END DEBUG
-        // }
-        // // DEBUG
-        // if(contours.size()!=0)
-        // {
-        //     cv::Mat resized;
-        //     cv::resize(maskInBGR, resized,cv::Size(),WINDOW_SCALE,WINDOW_SCALE);
-        //     cv::imshow(color + "(blurred)", resized);
-        //     while(true)
-        //         if(cv::waitKey(30) == 27)
-        //         {    cout<<"ESC pressed"<<endl<<endl; break;}
-        // }
-        // // END DEBUG=
+        cv::Mat frameInHSV;
+        cv::cvtColor(frame, frameInHSV, cv::COLOR_BGR2HSV);
+
+        cv::Mat mask;
+        cv::Scalar lb, ub;
+        color_t c = ws->missing;
+        switch(c)
+        {
+            case green: lb = greenLB; ub = greenUB; break;
+            case blue: lb = blueLB; ub = blueUB; break;
+            case red: lb = redLB; ub = redUB; break;
+            case yellow: lb = yellowLB; ub = yellowUB; break;
+            case white: lb = whiteLB; ub = whiteUB; break;
+        }
+        string color = colorToStr(c);
+        cv::inRange(frameInHSV, lb, ub, mask);
+
+        // Filter Noise
+        cv::blur(mask, mask, cv::Size(5,5));
+        cv::erode(mask, mask, getStructuringElement(cv::MORPH_RECT,
+                                                    cv::Size(3,3)));
+
+        cv::Mat res, wsMask(mask.rows, mask.cols, CV_8UC1, cv::Scalar(0));
+        wsMask(cv::Rect(ws->b_nw, ws->b_se)) = cv::Scalar(255);
+        cv::bitwise_and(wsMask, mask, mask);
+        cv::bitwise_xor(mask, ws->bounds, res);
+        // ~~~~~ DEBUG ~~~~~
+        // THIS IS [1]
+        // NOTE: ENVISIBUILD WILL ONLY WORK IF [1] XOR [2]!!!!!
+        // cv::Mat resized;
+        // cv::resize(res, resized, cv::Size(), .5, .5);
+        // cv::imshow("workspace mask", resized);
+        // cv::resize(mask, resized, cv::Size(), .5, .5);
+        // cv::imshow("truncated mask", resized);
+
+        // IMAGE
+        // while(true)
+        // if(cv::waitKey(30) == 27)
+        // {    cout<<"ESC pressed"<<endl<<endl; break;}
+
+        // VIDEO
+        // if(cv::waitKey(1) == 27)
+        // {    cout<<"ESC pressed"<<endl<<endl;}
+
+        // ~~~ END DEBUG ~~~
+
+        if(cv::countNonZero(res) >= ws->area-FILL_DIFF)
+        {
+            ws->bounds(cv::Rect(ws->b_nw,ws->b_se)) = cv::Scalar(255);
+            return true;
+        }
+        // ~~~~~ DEBUG ~~~~~
+        // THIS IS [2]
+        // NOTE: ENVISIBUILD WILL ONLY WORK IF [1] XOR [2]!!!!!
         ws->bounds(cv::Rect(ws->b_nw,ws->b_se)) = cv::Scalar(255);
         return true;
+        // ~~~ END DEBUG ~~~
+        return false;
+    }
+    bool projectComplete(Workspace * ws)
+    {
+        int numProjSteps = 0;
+        switch(ws->p)
+        {
+            case stripedcube:
+                numProjSteps = stripedcube_ref.numInstr; break;
+            case staircase:
+                numProjSteps = staircase_ref.numInstr; break;
+            case tower:
+                numProjSteps = tower_ref.numInstr; break;
+        }
+        return ws->step == numProjSteps;
     }
 }

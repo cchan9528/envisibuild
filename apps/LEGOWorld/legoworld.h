@@ -8,11 +8,9 @@
  * Descriptors
  *
  *******************************************************************/
-
-#define IMAGE 1
-#define VIDEO 2
+ #define IMAGE 1
+ #define VIDEO 2
 #define NUM_COLORS 5
-
 #define NUMSTEPS_STRIPEDCUBE 6
 #define NUMSTEPS_STAIRCASE 4
 #define NUMSTEPS_TOWER 3
@@ -30,7 +28,7 @@ enum shape_t { square, rect, unkwn };
 
 enum op_t { PLC, STK };
 
-enum dir_t{ NN, NE, EE, SE, SS, SW, WW, NW };
+enum dir_t{ NN, NE, EE, SE, SS, SW, WW, NW, XX };
 
 enum project_t { stripedcube, staircase, tower, none };
 
@@ -59,8 +57,8 @@ namespace lw {
     typedef struct Instruction{
         op_t op;
         char r1[3];
-        char r2[3];
-        char r3[3];
+        dir_t r2;
+        dir_t r3;
     } Instruction;
 
     typedef struct Project{
@@ -70,6 +68,7 @@ namespace lw {
     } Project;
 
     typedef struct Workspace{
+        int step;
         project_t p;
         color_t missing;
         cv::Point b_cc, b_nw, b_se;
@@ -85,8 +84,7 @@ namespace lw {
      ******************************************************/
 
     /* Construction */
-    project_t strToProject(std::string s);
-    Instruction * getInstrStep(project_t projectName, int step);
+    project_t strToProj(std::string s);
     void countPieces(cv::Mat frameInHSV, Colortab* tab);
     void countPieces(cv::Mat frameInHSV, Colortab* tabs, int tabsSize);
     void materialsReport(lw::Colortab * tabs, int tabsSize);
@@ -94,10 +92,12 @@ namespace lw {
                         Colortab* tabs, int tabsSize);
 
     /* Workspace */
+    bool projectComplete(Workspace * ws);
     void buildWorkspace(cv::Mat frame, Workspace * ws, project_t p);
     void drawWorkspace(cv::Mat frame, Workspace * ws);
+    bool clearWorkspace(cv::Mat frame, Workspace * ws);
     void drawInstr(cv::Mat frame, Workspace * ws,const Instruction * instr);
     bool instrDone(cv::Mat frame, Workspace * ws,const Instruction * instr);
-    bool clearWorkspace(cv::Mat frame, Workspace * ws);
+    Instruction * getInstrStep(project_t projectName, int step);
 }
 #endif

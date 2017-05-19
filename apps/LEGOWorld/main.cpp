@@ -12,15 +12,25 @@ int main(int argc, char** argv)
         cout<<"\nUsage: ./LEGOWorld [filename]\n"<<endl;
         return -1;
     }
-    else if(argc == 2)
+    cout << endl << endl;
+    cout << "*******************************"<<endl;
+    cout << "\n\n   Welcome to Envisibuild!\n\n"<<endl;
+    cout << "*******************************"<<endl;
+    project_t p = lw::strToProj(((argc==2) ? argv[1] : argv[2]));
+    if(p==none)
     {
-        project_t projectName = lw::strToProject(argv[1]);
-        if(projectName==none)
-        {
-            lw::projectPossible(none, cv::Mat(), NULL, -1);
-            return -1;
-        }
+        cout<<endl<<"\'"<<((argc==2) ? argv[1] : argv[2])\
+            <<"\' not yet available."<<endl\
+            <<"Please choose an available project:\n"\
+            <<"    . stripedcube\n"\
+            <<"    . staircase\n"\
+            <<"    . tower\n"<<endl<<endl;
+        return -1;
+    }
+    cout << "\nBuilding " << argv[2] << "..."<<endl;
 
+    if(argc == 2)
+    {
         // Establish Frame Source
         cv::VideoCapture camera;
         camera.open(0);
@@ -42,22 +52,14 @@ int main(int argc, char** argv)
     }
     else if(argc == 3)
     {
-        // Determine Desired Project
-        project_t projectName = lw::strToProject(argv[2]);
-        if(projectName==none)
-        {
-            lw::projectPossible(none, cv::Mat(), NULL, -1);
-            return -1;
-        }
-
         // Keep Tabs on Current Materials
-        lw::Colortab colortabs[5] = {
-            {.c = red,  .sCount = 0, .rCount = 0},
-            {.c = yellow,   .sCount = 0, .rCount = 0},
-            {.c = green,    .sCount = 0, .rCount = 0},
-            {.c = blue, .sCount = 0, .rCount = 0},
-            {.c = white,  .sCount = 0, .rCount = 0}
-        };
+        // lw::Colortab colortabs[5] = {
+        //     {.c = red,  .sCount = 0, .rCount = 0},
+        //     {.c = yellow,   .sCount = 0, .rCount = 0},
+        //     {.c = green,    .sCount = 0, .rCount = 0},
+        //     {.c = blue, .sCount = 0, .rCount = 0},
+        //     {.c = white,  .sCount = 0, .rCount = 0}
+        // };
 
         char * framesource = argv[1];
 
@@ -70,60 +72,43 @@ int main(int argc, char** argv)
                 cout<<"\nRead Frame Error.\nLEGOFinder Terminated\n"<<endl;
                 return -1;
             }
-            //
-            // // Process
-            // lw::projectPossible(projectName,frame,colortabs,NUM_COLORS);
-            // lw::materialsReport(colortabs, NUM_COLORS);
 
+            // Build Workspace
             lw::Workspace ws;
-            lw::buildWorkspace(frame, &ws, projectName);
+            lw::buildWorkspace(frame, &ws, p);
             lw::drawWorkspace(frame, &ws);
 
-            int numsteps;
-            if(projectName == stripedcube)
-                numsteps = NUMSTEPS_STRIPEDCUBE;
-            else if(projectName == staircase)
-                numsteps = NUMSTEPS_STAIRCASE;
-            else
-                numsteps = NUMSTEPS_TOWER;
-
             lw::Instruction * curInstr;
-            // for(int i=0; i < numsteps;)
-            // ~~~~~ DEBUG ~~~~~
-            for(int i=0; i < numsteps;)
-            // ~~~ END DEBUG ~~~
+            while(!lw::projectComplete(&ws))
             {
-                cv::Mat tempFrame = frame.clone();
-                lw::drawWorkspace(tempFrame, &ws);
-                // while(!lw::clearWorkspace(frame,&ws)){};
+                cv::Mat clone = frame.clone();
+                lw::drawWorkspace(clone, &ws);
 
-                cout<<"Step "<<i+1<<": "<<endl;
-                curInstr = lw::getInstrStep(projectName, i);
-                lw::drawInstr(tempFrame, &ws, curInstr);
-                cout<<endl<<endl<<endl;
+                curInstr = lw::getInstrStep(p, ws.step);
+                lw::drawInstr(clone, &ws, curInstr);
 
-                // ~~~~~ DEBUG ~~~~~
                 cv::Mat resized;
-                cv::resize(tempFrame, resized, cv::Size(), .5, .5);
+                cv::resize(clone, resized, cv::Size(), .5, .5);
                 cv::imshow("original", resized);
-                // i++;
-                while(true)
-                // ~~~ END DEBUG ~~~
-                if(cv::waitKey(30) == 27)
-                {    cout<<"ESC pressed"<<endl<<endl; break;}
-
-                if(lw::instrDone(tempFrame, &ws, curInstr))
-                    i++;
-
-                // ~~~~~ DEBUG ~~~~~
                 cv::resize(ws.bounds, resized, cv::Size(), .5, .5);
                 cv::imshow("mask", resized);
-                // i++;
                 while(true)
-                if(cv::waitKey(30) == 27)
-                {    cout<<"ESC pressed"<<endl<<endl; break;}
+                    if(cv::waitKey(30) == 27)
+                        break;
+
+                if(lw::instrDone(frame, &ws, curInstr))
+                    ws.step++;
+
+                // ~~~~~ DEBUG ~~~~~
+
+                // NOTE: WILL WORK IF:
+                // - ONLY [1] IS ON (MASKING)
+                //          AND ONLY IMAGE SECTION in [1] IS ON
+                // - ONLY [2] IS ON (SEQUENCING)
+                //          AND ALL OF [1] IS OFF
+
                 // ~~~ END DEBUG ~~~
-        }
+            }
         }
         else
         {
@@ -133,30 +118,17 @@ int main(int argc, char** argv)
             // Configure Workspace
             cv::Mat frame; video >> frame;
             lw::Workspace ws;
-            lw::buildWorkspace(frame, &ws, projectName);
-
-            int numsteps;
-            if(projectName == stripedcube)
-                numsteps = NUMSTEPS_STRIPEDCUBE;
-            else if(projectName == staircase)
-                numsteps = NUMSTEPS_STAIRCASE;
-            else
-                numsteps = NUMSTEPS_TOWER;
+            lw::buildWorkspace(frame, &ws, p);
 
             lw::Instruction * curInstr;
-            // for(int i=0; i < numsteps;)
-            // ~~~~~ DEBUG ~~~~~
-            for(int i=0; i < numsteps && video.isOpened();)
-            // ~~~ END DEBUG ~~~
+            while(!projectComplete(&ws) && video.isOpened())
             {
                 video >> frame;
-                lw::drawWorkspace(frame, &ws);
-                // while(!lw::clearWorkspace(frame,&ws)){};
+                cv::Mat clone = frame.clone();
+                lw::drawWorkspace(clone, &ws);
 
-                cout<<"Step "<<i+1<<": "<<endl;
-                curInstr = lw::getInstrStep(projectName, i);
-                lw::drawInstr(frame, &ws, curInstr);
-                cout<<endl<<endl<<endl;
+                curInstr = lw::getInstrStep(p, ws.step);
+                lw::drawInstr(clone, &ws, curInstr);
 
                 // ~~~~~ DEBUG ~~~~~
                 cv::Mat resized;
@@ -165,21 +137,25 @@ int main(int argc, char** argv)
                 // while(true)
                 // ~~~ END DEBUG ~~~
                 if(cv::waitKey(1) == 27)
-                {    cout<<"ESC pressed"<<endl<<endl; break;}
+                    break;
 
                 if(lw::instrDone(frame, &ws, curInstr))
-                    i++;
+                    ws.step++;
 
                 // ~~~~~ DEBUG ~~~~~
-                cv::resize(ws.bounds, resized, cv::Size(), .5, .5);
-                cv::imshow("mask", resized);
-                // i++;
-                while(true)
-                if(cv::waitKey(30) == 27)
-                {    cout<<"ESC pressed"<<endl<<endl; break;}
+
+                // NOTE: WILL ONLY WORK IF [2] IS OFF
+                //          AND ONLY VIDEO SECTION in [1] IS ON
+                // MASKING (BUT SLOWER FRAME RATE)
+
                 // ~~~ END DEBUG ~~~
             }
         }
+        cout << endl << endl;
+        cout << "*******************************"<<endl;
+        cout << "       Congratulations!\n     Project is Complete!"<<endl;
+        cout << "*******************************"<<endl;
+        cout << "\n\n Thanks for Using Envisibuild!\n\t     :)\n\n"<<endl;
         return 0;
     }
 }
