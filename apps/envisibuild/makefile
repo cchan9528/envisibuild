@@ -13,9 +13,9 @@ LIBS = -lopencv_calib3d -lopencv_contrib -lopencv_core -lopencv_features2d\
 	   -lopencv_ts -lopencv_video -lopencv_videostab
 OPENCVSRC = /usr/local/include/
 
-all: LEGOWorld
+all: envisibuild
 
-LEGOWorld: $(OBJ)
+envisibuild: $(OBJ)
 	$(CXX) -L$(LIBDIR) $(LIBS) -o $@ $(OBJ)
 
 main.o: main.cpp envisibuild.h	# Depends on legoworld.h, but don't compile
@@ -28,4 +28,4 @@ legoworld.o: legoworld.cpp legoworld.h
 	$(CXX) $(CXXFLAGS) -I$(OPENCVSRC) -o $@ -c $<
 
 clean:
-	rm -r *.o ./LEGOWorld
+	rm -r *.o ./envisibuild
