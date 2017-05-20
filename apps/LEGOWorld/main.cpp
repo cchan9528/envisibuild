@@ -1,10 +1,38 @@
-#include "legoworld.h"
+#include "envisibuild.h"
 #include <opencv2/core.hpp>
 #include <opencv2/highgui.hpp>          // Media I/O
 #include <opencv2/imgproc.hpp>
 #include <iostream>
 
 using namespace std;
+
+int fileType(char * s)
+{
+    int i = 0;
+    while(1) {i++; if(s[i]==0){break;}}
+    if(i<5)
+    {
+        return -1;
+    }
+    else
+    {
+        switch(s[i-3])
+        {
+            case 'j':
+            case 'J':
+            case 'P':
+            case 'p':
+                return IMAGE;
+            case 'm':
+            case 'M':
+                return VIDEO;
+            default:
+                cout<<"\n\nCouldn't Resolve FileType "<<s[i-4]<<"\n\n"<<endl;
+                return -1;
+        }
+    }
+}
+
 int main(int argc, char** argv)
 {
     if(argc<2)
@@ -16,7 +44,7 @@ int main(int argc, char** argv)
     cout << "*******************************"<<endl;
     cout << "\n\n   Welcome to Envisibuild!\n\n"<<endl;
     cout << "*******************************"<<endl;
-    project_t p = lw::strToProj(((argc==2) ? argv[1] : argv[2]));
+    project_t p = strToProj(((argc==2) ? argv[1] : argv[2]));
     if(p==none)
     {
         cout<<endl<<"\'"<<((argc==2) ? argv[1] : argv[2])\
@@ -74,18 +102,18 @@ int main(int argc, char** argv)
             }
 
             // Build Workspace
-            lw::Workspace ws;
-            lw::buildWorkspace(frame, &ws, p);
-            lw::drawWorkspace(frame, &ws);
+            Workspace ws;
+            buildWorkspace(frame, &ws, p);
+            drawWorkspace(frame, &ws);
 
             lw::Instruction * curInstr;
-            while(!lw::projectComplete(&ws))
+            while(!projectComplete(&ws))
             {
                 cv::Mat clone = frame.clone();
-                lw::drawWorkspace(clone, &ws);
+                drawWorkspace(clone, &ws);
 
-                curInstr = lw::getInstrStep(p, ws.step);
-                lw::drawInstr(clone, &ws, curInstr);
+                curInstr = getInstrStep(p, ws.step);
+                drawInstr(clone, &ws, curInstr);
 
                 cv::Mat resized;
                 cv::resize(clone, resized, cv::Size(), .5, .5);
@@ -96,7 +124,7 @@ int main(int argc, char** argv)
                     if(cv::waitKey(30) == 27)
                         break;
 
-                if(lw::instrDone(frame, &ws, curInstr))
+                if(instrDone(frame, &ws, curInstr))
                     ws.step++;
 
                 // ~~~~~ DEBUG ~~~~~
@@ -117,18 +145,18 @@ int main(int argc, char** argv)
 
             // Configure Workspace
             cv::Mat frame; video >> frame;
-            lw::Workspace ws;
-            lw::buildWorkspace(frame, &ws, p);
+            Workspace ws;
+            buildWorkspace(frame, &ws, p);
 
             lw::Instruction * curInstr;
             while(!projectComplete(&ws) && video.isOpened())
             {
                 video >> frame;
                 cv::Mat clone = frame.clone();
-                lw::drawWorkspace(clone, &ws);
+                drawWorkspace(clone, &ws);
 
-                curInstr = lw::getInstrStep(p, ws.step);
-                lw::drawInstr(clone, &ws, curInstr);
+                curInstr = getInstrStep(p, ws.step);
+                drawInstr(clone, &ws, curInstr);
 
                 // ~~~~~ DEBUG ~~~~~
                 cv::Mat resized;
@@ -139,7 +167,7 @@ int main(int argc, char** argv)
                 if(cv::waitKey(1) == 27)
                     break;
 
-                if(lw::instrDone(frame, &ws, curInstr))
+                if(instrDone(frame, &ws, curInstr))
                     ws.step++;
 
                 // ~~~~~ DEBUG ~~~~~

@@ -8,31 +8,19 @@
  * Descriptors
  *
  *******************************************************************/
- #define IMAGE 1
- #define VIDEO 2
 #define NUM_COLORS 5
-#define NUMSTEPS_STRIPEDCUBE 6
-#define NUMSTEPS_STAIRCASE 4
-#define NUMSTEPS_TOWER 3
+#define SHORT 150
+#define LONG 300
 
 /******************************************************
  *
  * Type Declarations
  *
  ******************************************************/
-
-// enum bool { false, true };
 enum color_t { red=0, blue=3, green=2, yellow=1, white=4, clear };
-
 enum shape_t { square, rect, unkwn };
-
 enum op_t { PLC, STK };
-
 enum dir_t{ NN, NE, EE, SE, SS, SW, WW, NW, XX };
-
-enum project_t { stripedcube, staircase, tower, none };
-
-int fileType(char * s);
 
 namespace lw {
 
@@ -67,37 +55,25 @@ namespace lw {
         Instruction * instr;
     } Project;
 
-    typedef struct Workspace{
-        int step;
-        project_t p;
-        color_t missing;
-        cv::Point b_cc, b_nw, b_se;
-        cv::Point nw, se;
-        cv::Mat bounds;
-        int area;
-    } Workspace;
-
     /******************************************************
      *
      * Helper Functions
      *
      ******************************************************/
 
-    /* Construction */
-    project_t strToProj(std::string s);
-    void countPieces(cv::Mat frameInHSV, Colortab* tab);
-    void countPieces(cv::Mat frameInHSV, Colortab* tabs, int tabsSize);
-    void materialsReport(lw::Colortab * tabs, int tabsSize);
-    bool projectPossible(project_t project, cv::Mat frame,
-                        Colortab* tabs, int tabsSize);
+    /* Piece Details */
+    cv::Scalar drawColor(color_t color);
+    std::string colorToStr(int c);
+    std::string shapeToStr(shape_t s);
 
-    /* Workspace */
-    bool projectComplete(Workspace * ws);
-    void buildWorkspace(cv::Mat frame, Workspace * ws, project_t p);
-    void drawWorkspace(cv::Mat frame, Workspace * ws);
-    bool clearWorkspace(cv::Mat frame, Workspace * ws);
-    void drawInstr(cv::Mat frame, Workspace * ws,const Instruction * instr);
-    bool instrDone(cv::Mat frame, Workspace * ws,const Instruction * instr);
-    Instruction * getInstrStep(project_t projectName, int step);
+    /* Construction */
+    void getHSVRange(color_t c, cv::Scalar * lb, cv::Scalar * ub);
+    // void countPieces(cv::Mat frameInHSV, Colortab* tab);
+    // void countPieces(cv::Mat frameInHSV, Colortab* tabs, int tabsSize);
+    // void materialsReport(lw::Colortab * tabs, int tabsSize);
+    // bool projectPossible(project_t project, cv::Mat frame,
+    //                     Colortab* tabs, int tabsSize);
+
+
 }
 #endif

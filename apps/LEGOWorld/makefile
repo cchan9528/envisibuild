@@ -4,7 +4,7 @@
 
 CXX = g++
 CXXFLAGS = -g -Wall
-OBJ = main.o legoworld.o
+OBJ = main.o envisibuild.o legoworld.o
 LIBDIR = /usr/local/lib
 LIBS = -lopencv_calib3d -lopencv_contrib -lopencv_core -lopencv_features2d\
 	   -lopencv_flann -lopencv_gpu -lopencv_highgui -lopencv_imgproc\
@@ -18,7 +18,10 @@ all: LEGOWorld
 LEGOWorld: $(OBJ)
 	$(CXX) -L$(LIBDIR) $(LIBS) -o $@ $(OBJ)
 
-main.o: main.cpp legoworld.h	# Depends on legoworld.h, but don't compile
+main.o: main.cpp envisibuild.h	# Depends on legoworld.h, but don't compile
+	$(CXX) $(CXXFLAGS) -I$(OPENCVSRC) -o $@ -c $<
+
+envisibuild.o: envisibuild.cpp envisibuild.h
 	$(CXX) $(CXXFLAGS) -I$(OPENCVSRC) -o $@ -c $<
 
 legoworld.o: legoworld.cpp legoworld.h
