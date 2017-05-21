@@ -92,8 +92,8 @@ namespace lw{
         switch(color)
         {
             case red: return cv::Scalar(0,0,255);
-            case yellow: return cv::Scalar(255,255,0);
-            case green: return cv::Scalar(0,255,0);
+            case yellow: return cv::Scalar(0,255,255);
+            case green: return cv::Scalar(0,153,0);
             case blue: return cv::Scalar(255,0,0);
             case white: return cv::Scalar(255,255,255);
         }

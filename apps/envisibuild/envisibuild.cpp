@@ -37,9 +37,9 @@ const Project stripedcube_ref = {
 // Staircase
 Instruction staircase_instr[4] = {
     { .op = PLC, .r1 = "RR", .r2 = XX, .r3 = XX},
-    { .op = PLC, .r1 = "RS", .r2 = NN, .r3 = XX},
+    { .op = PLC, .r1 = "WS", .r2 = NN, .r3 = XX},
     { .op = STK, .r1 = "RR", .r2 = NW, .r3 = NE},
-    { .op = STK, .r1 = "RS", .r2 = NW, .r3 = SW}
+    { .op = STK, .r1 = "YS", .r2 = NW, .r3 = SW}
 };
 extern const Project staircase_ref = {
     .materials[red] = {.c = red, .sCount=2, .rCount=2},
@@ -49,9 +49,9 @@ extern const Project staircase_ref = {
 
 // Tower
 Instruction tower_instr[3] = {
-    { .op = PLC, .r1 = "GS", .r2 = XX, .r3 = XX},
+    { .op = PLC, .r1 = "BS", .r2 = XX, .r3 = XX},
     { .op = STK, .r1 = "GS", .r2 = NW, .r3 = NW},
-    { .op = STK, .r1 = "GS", .r2 = NW, .r3 = NW}
+    { .op = STK, .r1 = "RS", .r2 = NW, .r3 = NW}
 };
 extern const Project tower_ref = {
     .materials[green] = {.c = green, .sCount=3, .rCount=0},
@@ -97,7 +97,9 @@ bool clearWorkspace(cv::Mat frame, Workspace * ws)
 
 void drawWorkspace(cv::Mat frame, Workspace * ws)
 {
-    cv::rectangle(frame, ws->b_nw, ws->b_se, drawColor(green), 3);
+    cv::putText(frame, "workspace", ws->b_nw,
+                cv::FONT_HERSHEY_DUPLEX, 1, cv::Scalar(153,255,153), 2);
+    cv::rectangle(frame, ws->b_nw, ws->b_se, cv::Scalar(153,255,153), 2);
 }
 
 Instruction * getInstrStep(project_t projectName, int step)
@@ -315,13 +317,12 @@ bool instrDone(cv::Mat frame, Workspace * ws, const Instruction * instr)
     cv::bitwise_and(wsMask, mask, mask);
     cv::bitwise_xor(mask, ws->bounds, res);
     // ~~~~~ DEBUG ~~~~~
-    // THIS IS [1]
+    cv::Mat resized;
+    cv::resize(res, resized, cv::Size(), WINDOW_SCALE, WINDOW_SCALE);
+    cv::imshow("workspace mask", resized);
+
+    // THIS IS [1] - TURN THIS ON TO UNDERSTAND MASKING
     // NOTE: ENVISIBUILD WILL ONLY WORK IF [1] XOR [2]!!!!!
-    // cv::Mat resized;
-    // cv::resize(res, resized, cv::Size(), WINDOW_SCALE, WINDOW_SCALE);
-    // cv::imshow("workspace mask", resized);
-    // cv::resize(mask, resized, cv::Size(), WINDOW_SCALE, WINDOW_SCALE);
-    // cv::imshow("truncated mask", resized);
 
     // IMAGE
     // while(true)
@@ -340,7 +341,7 @@ bool instrDone(cv::Mat frame, Workspace * ws, const Instruction * instr)
         return true;
     }
     // ~~~~~ DEBUG ~~~~~
-    // THIS IS [2]
+    // THIS IS [2] - TURN THIS ON FOR SEQUENCING OF STEPS (IMAGE ONLY)
     // NOTE: ENVISIBUILD WILL ONLY WORK IF [1] XOR [2]!!!!!
     ws->bounds(cv::Rect(ws->b_nw,ws->b_se)) = cv::Scalar(255);
     return true;
